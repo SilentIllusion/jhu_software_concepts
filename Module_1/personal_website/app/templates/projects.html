@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-container">
+        <!-- Page Header -->
+        <section class="page-header">
+                        <h1 class="page-title">My Projects</h1>
+                        <p class="page-subtitle">A collection of my work.</p>
+        </section>
+        <!-- Projects Grid -->
+                        <section class="projects-section">
+                                        <div class="projects-filter">
+                                                        <button class="filter-btn active" data-filter="all">All Projects</button>
+                                                        <button class="filter-btn" data-filter="web">Web Development</button>
+                                                        <button class="filter-btn" data-filter="data">Data Science</button>
+                                                        <button class="filter-btn" data-filter="ml">Machine Learning</button>
+                                        </div>
+
+                                        <div class="projects-grid">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const projectCards = document.querySelectorAll('.project-card');
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update active button
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const filterValue = btn.getAttribute('data-filter');
+
+                    projectCards.forEach(card => {
+                        if (filterValue === 'all' || card.getAttribute('data-category') === filterValue) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+        <!-- Project 1 -->
+        <div class="project-card" data-category="web">
+            <div class="project-image">
+                            <div class="project-category">Web Development</div>
+                            <img src="{{ url_for('static', filename='images/project1.png') }}" alt="My Personal Website">
+            </div>
+                <div class="project-content">
+                    <h3 class="project-title">Personal Website</h3>
+                    <p class="project-description">A personal website created to document and present an individual’s experiences, skills, and professional journey. The site provides an organized and accessible way for visitors to learn more about the individual’s background and areas of focus.</p>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Flask</span>
+                        <span class="tech-tag">HTML</span>
+                        <span class="tech-tag">CSS</span>
+                        <span class="tech-tag">JavaScript</span>
+                    </div>
+                    <!--<div class="project-links">
+                                    <a href="#" class="project-link"><i class="fab fa-github"></i> Code</a>
+                                    <a href="#" class="project-link"><i class="fas fa-external-link-alt"></i> Live Demo</a>
+                    </div>-->
+                </div>
+        </div>
+
+        <!-- Project 2 -->
+        <div class="project-card" data-category="data">
+            <div class="project-image">
+                            <div class="project-category">Data Science</div>
+                            <img src="{{ url_for('static', filename='images/project2.png') }}" alt="Data Visualization">
+            </div>
+            <div class="project-content">
+                            <h3 class="project-title">Space Domain Awareness</h3>
+                            <p class="project-description">Checks for potential satellite collisions and sends an alert when two satellites are at risk of collision.</p>
+                            <div class="project-tech">
+                                            <span class="tech-tag">Python</span>
+                            </div>
+                            <!--<div class="project-links">
+                                            <a href="#" class="project-link"><i class="fab fa-github"></i> Code</a>
+                                            <a href="#" class="project-link"><i class="fas fa-file-alt"></i> Paper</a>
+                            </div>-->
+            </div>
+        </div>
+                                                
+        <!-- Project 3 -->
+        <div class="project-card" data-category="data">
+            <div class="project-image">
+                <div class="project-category">Data Science</div>
+                <img src="{{ url_for('static', filename='images/project3.png') }}" alt="Data Visualization">
+            </div>
+            <div class="project-content">
+                <h3 class="project-title">WMATA Accessibility</h3>
+                <p class="project-description">Connects to the Washington Metro subway API and creates a visual map of where there are accessibility issues (ramps, escalators, etc)</p>
+                <div class="project-tech">
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">GeoJSON</span>
+                    <span class="tech-tag">MapBox</span>
+                </div>
+                <!--<div class="project-links">
+                                <a href="#" class="project-link"><i class="fab fa-github"></i> Code</a>
+                                <a href="#" class="project-link"><i class="fas fa-file-alt"></i> Paper</a>
+                </div>-->
+            </div>
+        </div>
+                                                
+        <!-- Project 4 -->
+        <div class="project-card" data-category="ml">
+            <div class="project-image">
+                <div class="project-category">Machine Learning</div>
+                <img src="{{ url_for('static', filename='images/project4.png') }}" alt="RAG">
+            </div>
+            <div class="project-content">
+                <h3 class="project-title">Generative AI</h3>
+                <p class="project-description">The program retrieves NASA Astronomy Picture of the Day information for a
+                specific date, generates related lookup terms using the LLM,
+                fetches supporting Wikipedia content for each term, and then
+                creates a final augmented description combining all of the above
+                information.</p>
+                <div class="project-tech">
+                    <span class="tech-tag">Ollama</span>
+                    <span class="tech-tag">Python</span>
+                </div>
+                <!--<div class="project-links">
+                                <a href="#" class="project-link"><i class="fab fa-github"></i> Code</a>
+                                <a href="#" class="project-link"><i class="fas fa-file-alt"></i> Research Paper</a>
+                </div>-->
+            </div>
+        </div>
+
+        <!-- Project 5 -->
+        <div class="project-card" data-category="data">
+            <div class="project-image">
+                <div class="project-category">Data Science</div>
+                <img src="{{ url_for('static', filename='images/project5.png') }}">
+            </div>
+                <div class="project-content">
+                    <h3 class="project-title">Quantum Computation</h3>
+                    <p class="project-description">This project is a basic simulation of quantum bits (qubits) using Python and NumPy.
+                    </p>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Numpy</span>
+                    </div>
+                    <!--<div class="project-links">
+                                    <a href="#" class="project-link"><i class="fab fa-github"></i> Code</a>
+                                    <a href="#" class="project-link"><i class="fas fa-chart-line"></i> Analysis</a>
+                    </div>-->
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+
+{% endblock %}

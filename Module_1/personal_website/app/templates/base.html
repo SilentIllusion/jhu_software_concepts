@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Donna De Witt | Software Developer</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>    
+	<nav class="navbar">
+			<div class="nav-container">
+					<div class="nav-brand">
+							<a href="{{ url_for('home') }}">
+									<span class="brand-icon"><i class="fas fa-code"></i></span>
+									<span class="brand-text">Donna De Witt | Software Developer</span>
+							</a>
+					</div>
+
+					<ul class="nav-menu">
+							<li class="nav-item {% if active_page == 'home' %}active{% endif %}">
+									<a href="{{ url_for('home') }}" class="nav-link">
+											<i class="fas fa-home"></i> Home
+									</a>
+							</li>
+							<li class="nav-item {% if active_page == 'projects' %}active{% endif %}">
+									<a href="{{ url_for('projects') }}" class="nav-link">
+											<i class="fas fa-project-diagram"></i> Projects
+									</a>
+							</li>
+							<li class="nav-item {% if active_page == 'contact' %}active{% endif %}">
+									<a href="{{ url_for('contact') }}" class="nav-link">
+											<i class="fas fa-envelope"></i> Contact
+									</a>
+							</li>
+					</ul>
+
+					<div class="menu-toggle">
+							<i class="fas fa-bars"></i>
+					</div>
+			</div>
+	</nav>
+
+	<main class="main-content">
+			{% block content %}{% endblock %}
+	</main>
+
+	<!-- Footer -->
+	<footer class="footer">
+			<div class="footer-content">
+					<p>&copy; 2026 Donna De Witt. All rights reserved.</p>
+					<div class="footer-social">
+							<a href="https://github.com/SilentIllusion" class="social-icon"><i class="fab fa-github"></i></a>
+							<a href="https://www.linkedin.com/in/dewittdonna/" class="social-icon"><i class="fab fa-linkedin"></i></a>
+					</div>
+			</div>
+	</footer>
