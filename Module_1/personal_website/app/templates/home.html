@@ -1,30 +1,57 @@
+{# Extend the base layout template #}
 {% extends "base.html" %}
 
+{# Begin content block injected into base.html #}
 {% block content %}
+
+	<!-- About page main section wrapper -->
 	<section>
 	<div class="About">
+
+		<!-- Main content area consistent with site layout -->
 		<main class="main-content">
 			<div class="container">
+
+					<!-- Hero section for About Me content -->
 					<section class="hero-section">
 							<div class="hero-content">
+
+									<!-- Textual content area -->
 									<div class="hero-text">
-											<!--<h1 class="hero-title">Donna De Witt</h1>
-											<h2 class="hero-subtitle">Software Developer</h2>-->
+
+											<!-- Optional name/title headings (currently commented out) -->
+											<!--
+											<h1 class="hero-title">Donna De Witt</h1>
+											<h2 class="hero-subtitle">Software Developer</h2>
+											-->
+
+											<!-- Section heading -->
 											<h1 class="hero-subtitle">About Me</h1>
+
+											<!-- Biography content -->
 											<div class="hero-bio">
+
+												<!-- Professional background subsection -->
 												<h3>Professional Life</h3>
 													<p>
-															I am a ServiceNow Architect with 5+ years of experience designing and building scalable, secure solutions for complex enterprise environments. I’ve led the development of custom applications 															using App Engine Studio, with a strong emphasis on clean architecture, reusability, and long-term maintainability. 
+															I am a ServiceNow Architect with 5+ years of experience designing and building scalable, secure solutions for complex enterprise environments. I’ve led the development of custom applications
+															using App Engine Studio, with a strong emphasis on clean architecture, reusability, and long-term maintainability. 
 													</p>
+
 													<p>
-															Alongside my professional work, I am currently a graduate student at Johns Hopkins University, pursuing an M.S. in Artificial Intelligence. I have extensive experience with Python, 						                            JavaScript, HTML, and CSS, and I’m particularly interested in where enterprise platforms intersect with automation, AI, and intelligent systems.
+															Alongside my professional work, I am currently a graduate student at Johns Hopkins University, pursuing an M.S. in Artificial Intelligence. I have extensive experience with Python,
+															JavaScript, HTML, and CSS, and I’m particularly interested in where enterprise platforms intersect with automation, AI, and intelligent systems.
 													</p>
+
+												<!-- Personal background subsection -->
 												<h3>Personal Life</h3>
 												<p>
 													I live in Louisville, KY, with my spouse, two teenagers, and our dog. When I’m not working, you’ll usually find me playing video games or at a stand-up comedy show.
 												</p>
 											</div>
-										<div class="hero-actions">
+
+											<!-- Call-to-action buttons -->
+											<div class="hero-actions">
 														<a href="{{ url_for('projects') }}" class="btn btn-primary">
 																<i class="fas fa-project-diagram"></i> View Projects
 														</a>
@@ -33,14 +60,23 @@
 														</a>
 												</div>
 										</div>
+
+								<!-- Profile image section -->
 								<div class="hero-image">
 									<div class="image-container">
+
+										<!-- Decorative frame for profile image -->
 										<div class="image-frame"></div>
+
+										<!-- Profile image -->
 										<img src="{{ url_for('static', filename='images/profile.jpg') }}" alt="Donna De Witt" class="profile-image">
 									</div>
 								</div>
+
 							</div>
 					</section>
+
 			</div>
 		</main>
-		{% endblock %}
+
+{% endblock %}

@@ -1,34 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+		<!-- Define character encoding for proper text rendering -->
 		<meta charset="UTF-8">
+
+		<!-- Ensure responsive behavior on mobile devices -->
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<!-- Page title shown in browser tab -->
 		<title>Donna De Witt | Software Developer</title>
+
+		<!-- Link to local CSS file served by Flask -->
 	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+		<!-- Font Awesome CDN for icons -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+		<!-- Google Fonts for typography -->
 	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>    
+
+	<!-- Main navigation bar -->
 	<nav class="navbar">
 			<div class="nav-container">
+
+					<!-- Brand/logo section -->
 					<div class="nav-brand">
 							<a href="{{ url_for('home') }}">
+									<!-- Icon used in brand -->
 									<span class="brand-icon"><i class="fas fa-code"></i></span>
+
+									<!-- Brand text -->
 									<span class="brand-text">Donna De Witt | Software Developer</span>
 							</a>
 					</div>
 
+					<!-- Navigation menu -->
 					<ul class="nav-menu">
+
+							<!-- Home navigation item -->
 							<li class="nav-item {% if active_page == 'home' %}active{% endif %}">
 									<a href="{{ url_for('home') }}" class="nav-link">
 											<i class="fas fa-home"></i> Home
 									</a>
 							</li>
+
+							<!-- Projects navigation item -->
 							<li class="nav-item {% if active_page == 'projects' %}active{% endif %}">
 									<a href="{{ url_for('projects') }}" class="nav-link">
 											<i class="fas fa-project-diagram"></i> Projects
 									</a>
 							</li>
+
+							<!-- Contact navigation item -->
 							<li class="nav-item {% if active_page == 'contact' %}active{% endif %}">
 									<a href="{{ url_for('contact') }}" class="nav-link">
 											<i class="fas fa-envelope"></i> Contact
@@ -36,23 +61,32 @@
 							</li>
 					</ul>
 
+					<!-- Mobile menu toggle icon -->
 					<div class="menu-toggle">
 							<i class="fas fa-bars"></i>
 					</div>
 			</div>
 	</nav>
 
+	<!-- Main content area populated by child templates -->
 	<main class="main-content">
 			{% block content %}{% endblock %}
 	</main>
 
-	<!-- Footer -->
+	<!-- Footer section -->
 	<footer class="footer">
 			<div class="footer-content">
+
+					<!-- Copyright notice -->
 					<p>&copy; 2026 Donna De Witt. All rights reserved.</p>
+
+					<!-- Social media links -->
 					<div class="footer-social">
 							<a href="https://github.com/SilentIllusion" class="social-icon"><i class="fab fa-github"></i></a>
 							<a href="https://www.linkedin.com/in/dewittdonna/" class="social-icon"><i class="fab fa-linkedin"></i></a>
 					</div>
 			</div>
 	</footer>
+
+</body>
+</html>

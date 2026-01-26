@@ -1,18 +1,31 @@
+{# Extend the base layout template #}
 {% extends "base.html" %}
 
+{# Begin content block injected into base.html #}
 {% block content %}
+
+<!-- Main page container -->
 <div class="page-container">
-		<!-- Page Header -->
+
+		<!-- Page header section -->
 		<section class="page-header">
+				<!-- Page title -->
 				<h1 class="page-title">Get In Touch</h1>
-				<p class="page-subtitle">Feel free to reach out for collaborations, opportunities, or just to say hello!</p>
+
+				<!-- Page subtitle / description -->
+				<p class="page-subtitle">
+						Feel free to reach out for collaborations, opportunities, or just to say hello!
+				</p>
 		</section>
 
-		<!-- Contact Section -->
+		<!-- Contact information section -->
 		<section class="contact-section">
 				<div class="contact-container">
-						<!-- Contact Info -->
+
+						<!-- Contact cards wrapper -->
 						<div class="contact-info">
+
+								<!-- Email contact card -->
 								<div class="contact-card">
 										<div class="contact-icon">
 												<i class="fas fa-envelope"></i>
@@ -20,10 +33,13 @@
 										<div class="contact-details">
 												<h3 class="contact-title">Email Address</h3>
 												<p class="contact-text">Donna.DeWitt.25@gmail.com</p>
-												<a href="mailto:Donna.DeWitt.25@gmail.com" class="contact-link">Send me an email</a>
+												<a href="mailto:Donna.DeWitt.25@gmail.com" class="contact-link">
+														Send me an email
+												</a>
 										</div>
 								</div>
 
+								<!-- LinkedIn contact card -->
 								<div class="contact-card">
 										<div class="contact-icon">
 												<i class="fab fa-linkedin"></i>
@@ -31,10 +47,13 @@
 										<div class="contact-details">
 												<h3 class="contact-title">LinkedIn Profile</h3>
 												<p class="contact-text">linkedin.com/in/dewittdonna</p>
-												<a href="https://linkedin.com/in/dewittdonna" target="_blank" class="contact-link">Connect with me</a>
+												<a href="https://linkedin.com/in/dewittdonna" target="_blank" class="contact-link">
+														Connect with me
+												</a>
 										</div>
 								</div>
 
+								<!-- Location contact card -->
 								<div class="contact-card">
 										<div class="contact-icon">
 												<i class="fas fa-map-marker-alt"></i>
@@ -46,6 +65,7 @@
 										</div>
 								</div>
 
+								<!-- Phone contact card -->
 								<div class="contact-card">
 										<div class="contact-icon">
 												<i class="fas fa-phone"></i>
@@ -56,7 +76,12 @@
 												<p class="contact-text">Available Mon-Fri, 9AM-6PM PST</p>
 										</div>
 								</div>
-						</div>	
+
+						</div>
+				</div>	
 		</section>
+
 </div>
+
+{# End content block #}
 {% endblock %}
