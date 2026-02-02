@@ -1,22 +1,12 @@
-import urllib3
 import scrape
+import clean
 
-def main():
-    base_url = "https://www.thegradcafe.com/"
-    paths = [
-        "/",
-        "/survey"
-    ]
-    agent = 'donna'
 
-    perms = scrape.permission(base_url, paths, agent)
-    for path, allowed in perms.items():
-        if allowed:
-            scrape.scrape_data(base_url)
-        else: 
-            print(f"Blocked by robots.txt: {path}")
-
+def main(url):
+    results = scrape.scrape_data(url)
+   # clean.clean_data(results)
 
 
 if __name__ == "__main__":
-    main()
+    base_url = "https://www.thegradcafe.com/"
+    main(base_url)
