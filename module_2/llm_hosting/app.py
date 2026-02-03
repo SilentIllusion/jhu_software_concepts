@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Flask + tiny local LLM standardizer with incremental JSONL CLI output."""
+"""Flask + tiny local LLM standardizer with streaming JSON output (parallel, ordered)."""
 
 from __future__ import annotations
 
@@ -8,11 +8,14 @@ import os
 import re
 import sys
 import difflib
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from flask import Flask, jsonify, request
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama  # CPU-only by default if N_GPU_LAYERS=0
+
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 app = Flask(__name__)
 
@@ -32,6 +35,10 @@ N_GPU_LAYERS = int(os.getenv("N_GPU_LAYERS", "0"))  # 0 → CPU-only
 
 CANON_UNIS_PATH = os.getenv("CANON_UNIS_PATH", "canon_universities.txt")
 CANON_PROGS_PATH = os.getenv("CANON_PROGS_PATH", "canon_programs.txt")
+
+# Parallelism knobs
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", "2"))  # number of worker processes
+MP_START_METHOD = os.getenv("MP_START_METHOD", "spawn")  # "spawn" is safest cross-platform
 
 # Precompiled, non-greedy JSON object matcher to tolerate chatter around JSON
 JSON_OBJ_RE = re.compile(r"\{.*?\}", re.DOTALL)
@@ -163,7 +170,7 @@ def _split_fallback(text: str) -> Tuple[str, str]:
 
 
 def _best_match(name: str, candidates: List[str], cutoff: float = 0.86) -> str | None:
-    """Fuzzy match via difflib (lightweight, Replit-friendly)."""
+    """Fuzzy match via difflib (lightweight)."""
     if not name or not candidates:
         return None
     matches = difflib.get_close_matches(name, candidates, n=1, cutoff=cutoff)
@@ -211,21 +218,9 @@ def _call_llm(program_text: str) -> Dict[str, str]:
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for x_in, x_out in FEW_SHOTS:
-        messages.append(
-            {"role": "user", "content": json.dumps(x_in, ensure_ascii=False)}
-        )
-        messages.append(
-            {
-                "role": "assistant",
-                "content": json.dumps(x_out, ensure_ascii=False),
-            }
-        )
-    messages.append(
-        {
-            "role": "user",
-            "content": json.dumps({"program": program_text}, ensure_ascii=False),
-        }
-    )
+        messages.append({"role": "user", "content": json.dumps(x_in, ensure_ascii=False)})
+        messages.append({"role": "assistant", "content": json.dumps(x_out, ensure_ascii=False)})
+    messages.append({"role": "user", "content": json.dumps({"program": program_text}, ensure_ascii=False)})
 
     out = llm.create_chat_completion(
         messages=messages,
@@ -260,6 +255,63 @@ def _normalize_input(payload: Any) -> List[Dict[str, Any]]:
     return []
 
 
+# ---------- multiprocessing helpers ----------
+def _worker_init() -> None:
+    """Run once per worker process: load model into that process."""
+    _load_llm()
+
+
+def _process_one_row(idx_and_row: Tuple[int, Dict[str, Any]]) -> Tuple[int, Dict[str, Any]]:
+    """Pure function suitable for multiprocessing."""
+    idx, row = idx_and_row
+    row = dict(row or {})
+    program_text = (row or {}).get("program") or ""
+    result = _call_llm(program_text)
+    row["llm-generated-program"] = result["standardized_program"]
+    row["llm-generated-university"] = result["standardized_university"]
+    return idx, row
+
+
+def _run_parallel(rows: List[Dict[str, Any]], max_workers: int) -> List[Dict[str, Any]]:
+    """
+    Parallelize row processing while preserving original order.
+    Returns a list of processed rows in the same order as input.
+    """
+    if not rows:
+        return []
+
+    # For very small batches, parallel overhead can dominate.
+    if max_workers <= 1 or len(rows) < 2:
+        return [_process_one_row((i, r))[1] for i, r in enumerate(rows)]
+
+    ctx = mp.get_context(MP_START_METHOD)
+    results: List[Optional[Dict[str, Any]]] = [None] * len(rows)
+
+    with ProcessPoolExecutor(
+        max_workers=max_workers,
+        mp_context=ctx,
+        initializer=_worker_init,
+    ) as ex:
+        futures = [ex.submit(_process_one_row, (i, r)) for i, r in enumerate(rows)]
+        for fut in as_completed(futures):
+            i, out_row = fut.result()
+            results[i] = out_row
+
+    return [r for r in results if r is not None]
+
+
+# ----------- streaming pretty JSON array helpers -----------
+def _write_pretty_array_item(sink, obj: Dict[str, Any], indent: int = 2) -> None:
+    """
+    Write a dict as a pretty-printed JSON object with a left indent,
+    suitable for streaming inside a JSON array.
+    """
+    text = json.dumps(obj, ensure_ascii=False, indent=indent)
+    pad = " " * indent
+    for line in text.splitlines():
+        sink.write(pad + line + "\n")
+
+
 @app.get("/")
 def health() -> Any:
     """Simple liveness check."""
@@ -272,15 +324,10 @@ def standardize() -> Any:
     payload = request.get_json(force=True, silent=True)
     rows = _normalize_input(payload)
 
-    out: List[Dict[str, Any]] = []
-    for row in rows:
-        program_text = (row or {}).get("program") or ""
-        result = _call_llm(program_text)
-        row["llm-generated-program"] = result["standardized_program"]
-        row["llm-generated-university"] = result["standardized_university"]
-        out.append(row)
+    # Use parallel processing per request (be conservative with MAX_WORKERS).
+    out_rows = _run_parallel(rows, max_workers=MAX_WORKERS)
 
-    return jsonify({"rows": out})
+    return jsonify({"rows": out_rows})
 
 
 def _cli_process_file(
@@ -288,39 +335,166 @@ def _cli_process_file(
     out_path: str | None,
     append: bool,
     to_stdout: bool,
+    out_format: str,  # "jsonl" or "json"
 ) -> None:
-    """Process a JSON file and write JSONL incrementally."""
+    """Process a JSON file and write JSONL or pretty JSON array (parallel, ordered)."""
     with open(in_path, "r", encoding="utf-8") as f:
         rows = _normalize_input(json.load(f))
 
     sink = sys.stdout if to_stdout else None
+
     if not to_stdout:
-        out_path = out_path or (in_path + ".jsonl")
+        # Default extension based on format
+        if out_path is None:
+            out_path = in_path + (".jsonl" if out_format == "jsonl" else ".json")
+
+        # Appending is safe for JSONL, NOT safe for a JSON array
+        if append and out_format == "json":
+            raise ValueError("Cannot --append with --format json (a JSON array cannot be safely appended).")
+
         mode = "a" if append else "w"
         sink = open(out_path, mode, encoding="utf-8")
 
-    assert sink is not None  # for type-checkers
+    assert sink is not None
+
+    if not rows:
+        if sink is not sys.stdout:
+            sink.close()
+        return
+
+    ctx = mp.get_context(MP_START_METHOD)
+    max_workers = max(1, MAX_WORKERS)
+
+    def write_jsonl_row(out_row: Dict[str, Any]) -> None:
+        json.dump(out_row, sink, ensure_ascii=False)
+        sink.write("\n")
+        sink.flush()
+
+    # Streaming pretty JSON array state
+    first_item = True
+
+    def start_json_array() -> None:
+        sink.write("[\n")
+        sink.flush()
+
+    def end_json_array() -> None:
+        sink.write("]\n")
+        sink.flush()
+
+    def write_json_array_row(out_row: Dict[str, Any]) -> None:
+        nonlocal first_item
+        if not first_item:
+            sink.write(",\n")
+        _write_pretty_array_item(sink, out_row, indent=2)
+        sink.flush()
+        first_item = False
 
     try:
-        for row in rows:
-            program_text = (row or {}).get("program") or ""
-            result = _call_llm(program_text)
-            row["llm-generated-program"] = result["standardized_program"]
-            row["llm-generated-university"] = result["standardized_university"]
+        if out_format == "json":
+            start_json_array()
 
-            json.dump(row, sink, ensure_ascii=False)
+        # Single-worker path
+        if max_workers == 1 or len(rows) < 2:
+            for i, row in enumerate(rows):
+                _, out_row = _process_one_row((i, row))
+                if out_format == "jsonl":
+                    write_jsonl_row(out_row)
+                else:
+                    write_json_array_row(out_row)
+
+            if out_format == "json":
+                sink.write("\n")
+                end_json_array()
+            return
+
+        # Parallel path: preserve input order via buffer + next_to_write
+        with ProcessPoolExecutor(
+            max_workers=max_workers,
+            mp_context=ctx,
+            initializer=_worker_init,
+        ) as ex:
+            futures = [ex.submit(_process_one_row, (i, r)) for i, r in enumerate(rows)]
+
+            next_to_write = 0
+            buffer: Dict[int, Dict[str, Any]] = {}
+
+            for fut in as_completed(futures):
+                i, out_row = fut.result()
+                buffer[i] = out_row
+
+                while next_to_write in buffer:
+                    row_to_write = buffer.pop(next_to_write)
+                    if out_format == "jsonl":
+                        write_jsonl_row(row_to_write)
+                    else:
+                        write_json_array_row(row_to_write)
+                    next_to_write += 1
+
+        if out_format == "json":
             sink.write("\n")
-            sink.flush()
+            end_json_array()
+
     finally:
         if sink is not sys.stdout:
             sink.close()
+            
+def convert_jsonl_to_pretty_json(
+    jsonl_path: str,
+    json_path: str | None = None,
+    indent: int = 2,
+) -> str:
+    """
+    Convert a JSONL (ndjson) file into a pretty JSON array file.
+
+    - Streams the input and output (does NOT load everything into memory).
+    - Skips empty lines.
+    - Raises ValueError if a non-empty line is not valid JSON.
+    """
+    if json_path is None:
+        base, _ = os.path.splitext(jsonl_path)
+        json_path = base + ".json"
+
+    with open(jsonl_path, "r", encoding="utf-8") as fin, open(json_path, "w", encoding="utf-8") as fout:
+        fout.write("[\n")
+
+        first = True
+        line_no = 0
+
+        for line in fin:
+            line_no += 1
+            s = line.strip()
+            if not s:
+                continue
+
+            try:
+                obj = json.loads(s)
+            except Exception as e:
+                raise ValueError(f"Invalid JSON on line {line_no} in {jsonl_path}: {e}") from e
+
+            if not first:
+                fout.write(",\n")
+
+            # Pretty-print one object with indentation, nested under array indentation.
+            text = json.dumps(obj, ensure_ascii=False, indent=indent)
+            pad = " " * indent
+            for ln in text.splitlines():
+                fout.write(pad + ln + "\n")
+
+            first = False
+
+        fout.write("]\n")
+
+    return json_path
 
 
 if __name__ == "__main__":
     import argparse
 
+    # Important for multiprocessing on Windows/macOS when frozen / certain runners:
+    mp.set_start_method(MP_START_METHOD, force=True)
+
     parser = argparse.ArgumentParser(
-        description="Standardize program/university with a tiny local LLM.",
+        description="Standardize program/university with a tiny local LLM (parallel).",
     )
     parser.add_argument(
         "--file",
@@ -335,23 +509,42 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out",
         default=None,
-        help="Output path for JSON Lines (ndjson). "
-        "Defaults to <input>.jsonl when --file is set.",
+        help="Output path. Defaults to <input>.json when --format json, "
+        "or <input>.jsonl when --format jsonl.",
     )
     parser.add_argument(
         "--append",
         action="store_true",
-        help="Append to the output file instead of overwriting.",
+        help="Append to the output file instead of overwriting (JSONL only).",
     )
     parser.add_argument(
         "--stdout",
         action="store_true",
-        help="Write JSON Lines to stdout instead of a file.",
+        help="Write output to stdout instead of a file.",
     )
+    parser.add_argument(
+        "--format",
+        choices=["jsonl", "json"],
+        default="json",
+        help="Output format. 'json' streams a pretty JSON array (like your screenshot). "
+        "'jsonl' streams newline-delimited JSON objects.",
+    )
+    parser.add_argument(
+        "--finalize-json",
+        action="store_true",
+        help="After streaming JSONL output, convert it into a pretty JSON array file.",
+    )
+    parser.add_argument(
+        "--finalize-out",
+        default=None,
+        help="Path for the finalized pretty JSON file. Defaults to <output>.json",
+    )
+
     args = parser.parse_args()
 
     if args.serve or args.file is None:
         port = int(os.getenv("PORT", "8000"))
+        # Flask dev server is single-process; for real parallel HTTP use gunicorn below.
         app.run(host="0.0.0.0", port=port, debug=False)
     else:
         _cli_process_file(
@@ -359,4 +552,28 @@ if __name__ == "__main__":
             out_path=args.out,
             append=bool(args.append),
             to_stdout=bool(args.stdout),
+            out_format=str(args.format),
         )
+
+        # Optional: finalize JSONL -> pretty JSON array
+        if bool(args.finalize_json):
+            if bool(args.stdout):
+                raise ValueError("--finalize-json requires writing to a file (do not use --stdout).")
+
+            if str(args.format) != "jsonl":
+                raise ValueError("--finalize-json is meant for --format jsonl.")
+
+            # Determine the actual JSONL output path used
+            jsonl_out_path = args.out or (args.file + ".jsonl")
+
+            # Default finalize output: replace .jsonl with .json
+            finalize_path = args.finalize_out
+            if finalize_path is None:
+                base, _ = os.path.splitext(jsonl_out_path)
+                finalize_path = base + ".json"
+
+            convert_jsonl_to_pretty_json(
+                jsonl_path=str(jsonl_out_path),
+                json_path=str(finalize_path),
+                indent=2,
+            )
