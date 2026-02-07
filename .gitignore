@@ -2,3 +2,4 @@
 /module_2/llm_hosting/models/*.gguf
 module_2.zip
 *.zip
+module_3/cleanup.py
