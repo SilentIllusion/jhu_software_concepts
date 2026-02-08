@@ -1,8 +1,10 @@
+"""Flask app for Grad Cafe analytics and data refresh."""
+
 import threading
 import time
 
 import psycopg
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, url_for
 
 from query_data import (
     SQL_AI_AVG_GPA,
@@ -28,17 +30,23 @@ from scripts.scrape import scrape_new_data
 
 app = Flask(__name__)
 
-def get_db_connection():
 
+def get_db_connection():
+    """Create a new database connection."""
     connection = psycopg.connect(
         dbname="grad_cafe",
         user="postgres",
-        password="04021986"
+        password="04021986",
     )
     return connection
 
+
 def query_scalar(cur, sql, params=None):
-    cur.execute(sql, params or ())
+    """Run a query that returns a single scalar value."""
+    if params is None:
+        cur.execute(sql)
+    else:
+        cur.execute(sql, params)
     row = cur.fetchone()
     if row is None:
         return None
@@ -50,6 +58,7 @@ scrape_lock = threading.Lock()
 
 
 def _get_existing_urls(conn):
+    """Return a set of URLs already present in the database."""
     with conn.cursor() as cur:
         cur.execute(SQL_SELECT_EXISTING_URLS)
         rows = cur.fetchall()
@@ -61,6 +70,7 @@ def _get_existing_urls(conn):
 
 
 def _get_latest_date_added(conn):
+    """Return the most recent date_added value, if present."""
     with conn.cursor() as cur:
         cur.execute(SQL_LATEST_DATE_ADDED)
         row = cur.fetchone()
@@ -68,6 +78,7 @@ def _get_latest_date_added(conn):
 
 
 def _insert_entries(conn, entries):
+    """Insert scraped entries and return the number inserted."""
     if not entries:
         return 0
 
@@ -102,6 +113,7 @@ def _insert_entries(conn, entries):
 
 
 def _run_scrape_job():
+    """Background job to scrape new data and update the database."""
     with scrape_lock:
         if scrape_state["running"]:
             return
@@ -128,8 +140,9 @@ def _run_scrape_job():
         with scrape_lock:
             scrape_state["running"] = False
 
-@app.route('/')
+@app.route("/")
 def index():
+    """Render the analytics dashboard."""
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -147,70 +160,19 @@ def index():
 
     avg_gpa_american_fall_2026 = query_scalar(cur, SQL_AVG_GPA_AMERICAN_FALL_2026)
 
-    pct_fall_2026_accept = query_scalar(
-        cur,
-        SQL_PCT_FALL_2026_ACCEPT,
-        ("Accepted%", "Fall 2026"),
-    )
+    pct_fall_2026_accept = query_scalar(cur, SQL_PCT_FALL_2026_ACCEPT)
 
-    avg_gpa_fall_2026_accept = query_scalar(
-        cur,
-        SQL_AVG_GPA_FALL_2026_ACCEPT,
-        ("Fall 2026", "Accepted%"),
-    )
+    avg_gpa_fall_2026_accept = query_scalar(cur, SQL_AVG_GPA_FALL_2026_ACCEPT)
 
-    jhu_ms_cs_count = query_scalar(
-        cur,
-        SQL_JHU_MS_CS_COUNT,
-        ("%Computer Science%", "%Johns Hopkins%", "%JHU%", "%Master%"),
-    )
+    jhu_ms_cs_count = query_scalar(cur, SQL_JHU_MS_CS_COUNT)
 
-    cs_phd_2026_top_count = query_scalar(
-        cur,
-        SQL_CS_PHD_2026_TOP_COUNT,
-        (
-            "%2026%",
-            "Accepted%",
-            "%PhD%",
-            "%Computer Science%",
-            "%Georgetown%",
-            "%MIT%",
-            "%Massachusetts Institute of Technology%",
-            "%Stanford%",
-            "%Carnegie Mellon%",
-        ),
-    )
+    cs_phd_2026_top_count = query_scalar(cur, SQL_CS_PHD_2026_TOP_COUNT)
 
-    cs_phd_2026_top_count_llm = query_scalar(
-        cur,
-        SQL_CS_PHD_2026_TOP_COUNT_LLM,
-        (
-            "%2026%",
-            "Accepted%",
-            "%PhD%",
-            "%Computer Science%",
-            "%Georgetown%",
-            "%MIT%",
-            "%Massachusetts Institute of Technology%",
-            "%Stanford%",
-            "%Carnegie Mellon%",
-        ),
-    )
+    cs_phd_2026_top_count_llm = query_scalar(cur, SQL_CS_PHD_2026_TOP_COUNT_LLM)
 
-    total_ai_count = query_scalar(
-        cur,
-        SQL_TOTAL_AI_COUNT,
-        (
-            "%Artificial Intelligence%",
-            "%Accepted%",
-        ),
-    )
+    total_ai_count = query_scalar(cur, SQL_TOTAL_AI_COUNT)
 
-    ai_avg_gpa = query_scalar(
-            cur,
-        SQL_AI_AVG_GPA,
-        ("%Artificial Intelligence%", "%Accepted%"),
-        )
+    ai_avg_gpa = query_scalar(cur, SQL_AI_AVG_GPA)
 
     cur.close()
     conn.close()
@@ -227,7 +189,7 @@ def index():
     )
 
     return render_template(
-        'index.html',
+        "index.html",
         intl_pct=intl_pct,
         count_fall_2026=count_fall_2026,
         avg_gpa=avg_gpa,
@@ -249,9 +211,9 @@ def index():
         scrape_last_run=scrape_state["last_run"],
     )
 
-
 @app.route("/pull-data", methods=["POST"])
 def pull_data():
+    """Start a background scrape job if one is not already running."""
     with scrape_lock:
         if scrape_state["running"]:
             scrape_state["message"] = (
@@ -267,6 +229,7 @@ def pull_data():
 
 @app.route("/update-analysis", methods=["POST"])
 def update_analysis():
+    """Refresh analysis when no scrape job is running."""
     with scrape_lock:
         if scrape_state["running"]:
             scrape_state["message"] = (
@@ -276,5 +239,6 @@ def update_analysis():
 
     return redirect(url_for("index"))
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)

@@ -7,18 +7,13 @@
   <h1>FAQs</h1>
   <div class="actions">
     <form method="post" action="{{ url_for('pull_data') }}">
-      <button class="btn" type="submit">Pull Data</button>
+      <button class="btn" title="Fetches new GradCafe results (if available) and adds them to your database." type="submit">Pull Data</button>
     </form>
     <form method="post" action="{{ url_for('update_analysis') }}">
-      <button class="btn btn-secondary" type="submit">Update Analysis</button>
+      <button class="btn btn-secondary" title="Refreshes this page with the latest data, but is disabled while Pull Data runs." type="submit">Update Analysis</button>
     </form>
   </div>
 </div>
-
-<p class="helper-text">
-  Pull Data: Fetches new GradCafe results (if available) and adds them to your database.
-  Update Analysis: Refreshes this page with the latest data, but is disabled while Pull Data runs.
-</p>
 
 {% if scrape_message %}
   <div class="status">
@@ -34,7 +29,7 @@
       <br><strong>Answer:</strong> {{ count_fall_2026 }}
     </li>
     <li>
-      What percentage of entries are from international students (not American or Other) (to two decimal places)?
+      What percentage of entries are from international students?
       <br><strong>Answer:</strong> {{ intl_pct }}
     </li>
     <li>
