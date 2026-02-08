@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>FAQs</h1>
+  <div class="actions">
+    <form method="post" action="{{ url_for('pull_data') }}">
+      <button class="btn" type="submit">Pull Data</button>
+    </form>
+    <form method="post" action="{{ url_for('update_analysis') }}">
+      <button class="btn btn-secondary" type="submit">Update Analysis</button>
+    </form>
+  </div>
+</div>
+
+<p class="helper-text">
+  Pull Data: Fetches new GradCafe results (if available) and adds them to your database.
+  Update Analysis: Refreshes this page with the latest data, but is disabled while Pull Data runs.
+</p>
+
+{% if scrape_message %}
+  <div class="status">
+    {{ scrape_message }}
+    {% if scrape_running %} (In progress){% endif %}
+  </div>
+{% endif %}
+
+<div class="questions">
+  <ol>
+    <li>
+      How many entries do you have in your database who have applied for Fall 2026?
+      <br><strong>Answer:</strong> {{ count_fall_2026 }}
+    </li>
+    <li>
+      What percentage of entries are from international students (not American or Other) (to two decimal places)?
+      <br><strong>Answer:</strong> {{ intl_pct }}
+    </li>
+    <li>
+      What is the average GPA, GRE, GRE V, GRE AW of applicants who provide these metrics?
+      <br><strong>Answer:</strong> GPA {{ avg_gpa }}, GRE {{ avg_gre }}, GRE V {{ avg_gre_v }}, GRE AW {{ avg_gre_aw }}
+    </li>
+    <li>
+      What is their average GPA of American students in Fall 2026?
+      <br><strong>Answer:</strong> {{ avg_gpa_american_fall_2026 }}
+    </li>
+    <li>
+      What percent of entries for Fall 2026 are Acceptances (to two decimal places)?
+      <br><strong>Answer:</strong> {{ pct_fall_2026_accept }}
+    </li>
+    <li>
+      What is the average GPA of applicants who applied for Fall 2026 who are Acceptances?
+      <br><strong>Answer:</strong> {{ avg_gpa_fall_2026_accept }}
+    </li>
+    <li>
+      How many entries are from applicants who applied to JHU for a masters degrees in Computer Science?
+      <br><strong>Answer:</strong> {{ jhu_ms_cs_count }}
+    </li>
+    <li>
+      How many entries from 2026 are acceptances from applicants who applied to Georgetown University, MIT, Stanford University, or Carnegie Mellon University for a PhD in Computer Science?
+      <br><strong>Answer:</strong> {{ cs_phd_2026_top_count }}
+    </li>
+    <li>
+      Do the numbers for question 8 change if you use LLM Generated Fields (rather than your downloaded fields)?
+      <br><strong>Answer:</strong> {{ "Yes" if counts_change else "No" }}
+      <br><span class="explain">{{ change_explanation }}</span>
+    </li>
+    <li>
+      How many entries are from applicants that applied to Artificial Intelligence programs?
+      <br><strong>Answer:</strong> {{ total_ai_count }}
+    </li>
+    <li>
+      What is the average GPA of applicants that were accepted to a Artificial Intelligence programs? 
+      <br><strong>Answer:</strong> {{ ai_avg_gpa }}
+    </li>
+  </ol>
+</div>
+{% endblock %}

@@ -3,3 +3,5 @@
 module_2.zip
 *.zip
 module_3/cleanup.py
+module_3/app/scripts/update_gre_from_urls.py
+.pdf

@@ -11,13 +11,17 @@ Notes:
 
 import json
 import re
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from bs4 import BeautifulSoup
 from urllib3 import PoolManager
 from urllib3.util.retry import Retry
 
-from clean import clean_data, save_data
+try:
+    from .clean import clean_data, save_data
+except ImportError:
+    from clean import clean_data, save_data
 
 
 # Base URL for Grad Cafe survey
@@ -72,13 +76,17 @@ def _extract_gre_from_text(text: str) -> Tuple[Optional[str], Optional[str], Opt
     gre_aw: Optional[str] = None
 
     # GRE total: "GRE 170" or "GRE: 170"
-    gre_match = re.search(r"GRE\s*:?\s*(\d{2,3})\b", text, re.IGNORECASE)
+    gre_match = re.search(
+        r"\bGRE\b\s*:?\s*(\d{2,3})\b",
+        text,
+        re.IGNORECASE,
+    )
     if gre_match:
         gre_total = gre_match.group(1)
 
     # GRE verbal: "GRE V 163" or "GRE Verbal 163"
     gre_v_match = re.search(
-        r"GRE\s*V(?:erbal)?\s*:?\s*(\d{2,3})\b",
+        r"\bGRE\b\s*V(?:erbal)?\s*:?\s*(\d{2,3})\b",
         text,
         re.IGNORECASE,
     )
@@ -87,7 +95,7 @@ def _extract_gre_from_text(text: str) -> Tuple[Optional[str], Optional[str], Opt
 
     # GRE analytical writing: "GRE AW 4.0" or "AW 4.0"
     gre_aw_match = re.search(
-        r"(?:GRE\s*)?AW\s*:?\s*(\d\.?\d*)\b",
+        r"\b(?:GRE\s*)?AW\b\s*:?\s*(\d\.?\d*)\b",
         text,
         re.IGNORECASE,
     )
@@ -97,7 +105,56 @@ def _extract_gre_from_text(text: str) -> Tuple[Optional[str], Optional[str], Opt
     return gre_total, gre_verbal, gre_aw
 
 
-def _extract_gpa_from_text(text: str) -> Optional[str]:
+def _extract_gre_from_badge_text(
+    text: str,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Extract GRE fields from a badge/label text on the listing page.
+
+    Badge examples (site-specific, best effort):
+      - "GRE 320"
+      - "GRE V 163"
+      - "GRE AW 4.0"
+      - "Verbal 163" (fallback)
+      - "AW 4.0"
+    """
+    if not text:
+        return None, None, None
+
+    gre_total = None
+    gre_verbal = None
+    gre_aw = None
+
+    # Normalize whitespace for easier matching.
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # GRE total: "GRE 320" or "GRE: 320"
+    total_match = re.search(r"\bGRE\b\s*:?\s*(\d{2,3})\b", text, re.IGNORECASE)
+    if total_match:
+        gre_total = total_match.group(1)
+
+    # GRE verbal: "GRE V 163" / "GRE Verbal 163" / "Verbal 163"
+    verbal_match = re.search(
+        r"\b(?:GRE\s*)?V(?:erbal)?\b\s*:?\s*(\d{2,3})\b",
+        text,
+        re.IGNORECASE,
+    )
+    if verbal_match:
+        gre_verbal = verbal_match.group(1)
+
+    # GRE analytical writing: "GRE AW 4.0" / "AW 4.0"
+    aw_match = re.search(
+        r"\b(?:GRE\s*)?AW\b\s*:?\s*(\d\.?\d*)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if aw_match:
+        gre_aw = aw_match.group(1)
+
+    return gre_total, gre_verbal, gre_aw
+
+
+def _extract_gpa_from_text(text: str) -> Optional[float]:
     """
     Extract GPA from text like 'GPA 3.69' or 'GPA: 3.7'.
 
@@ -111,7 +168,13 @@ def _extract_gpa_from_text(text: str) -> Optional[str]:
         return None
 
     gpa_match = re.search(r"GPA\s*:?\s*(\d\.?\d*)", text, re.IGNORECASE)
-    return gpa_match.group(1) if gpa_match else None
+    if not gpa_match:
+        return None
+
+    try:
+        return float(gpa_match.group(1))
+    except ValueError:
+        return None
 
 
 def _parse_decision_date(decision_text: str) -> Tuple[Optional[str], Optional[str]]:
@@ -333,17 +396,10 @@ def _parse_listing_row(
                 continue
 
             gpa = _extract_gpa_from_text(badge_text)
-            if gpa:
+            if gpa is not None:
                 entry["gpa"] = gpa
 
-    # Comment row: notes/comments; may include GRE/GPA hints.
-    if comment_row:
-        p_tag = comment_row.find("p")
-        if p_tag:
-            comment_text = p_tag.get_text(strip=True)
-            entry["comments"] = comment_text if comment_text else None
-
-            gre_total, gre_verbal, gre_aw = _extract_gre_from_text(comment_text)
+            gre_total, gre_verbal, gre_aw = _extract_gre_from_badge_text(badge_text)
             if gre_total and not entry["gre_score"]:
                 entry["gre_score"] = gre_total
             if gre_verbal and not entry["gre_v_score"]:
@@ -351,11 +407,26 @@ def _parse_listing_row(
             if gre_aw and not entry["gre_aw"]:
                 entry["gre_aw"] = gre_aw
 
+    # Comment row: notes/comments; does not populate GRE anymore.
+    if comment_row:
+        p_tag = comment_row.find("p")
+        if p_tag:
+            comment_text = p_tag.get_text(strip=True)
+            entry["comments"] = comment_text if comment_text else None
+
             # GPA may also appear in comments.
             if not entry["gpa"]:
                 gpa_from_comment = _extract_gpa_from_text(comment_text)
-                if gpa_from_comment:
+                if gpa_from_comment is not None:
                     entry["gpa"] = gpa_from_comment
+
+    # If GRE badges were not found, set default to 0.0 (as requested).
+    if not entry["gre_score"]:
+        entry["gre_score"] = 0.0
+    if not entry["gre_v_score"]:
+        entry["gre_v_score"] = 0.0
+    if not entry["gre_aw"]:
+        entry["gre_aw"] = 0.0
 
     return entry
 
@@ -463,6 +534,142 @@ def scrape_data(max_entries: int = 50000) -> List[Dict[str, Any]]:
     save_data(all_entries)
 
     return all_entries
+
+
+def scrape_new_data(
+    existing_urls,
+    max_entries: int = 5000,
+    max_pages: int = 50,
+    latest_date: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Scrape only new entries (by URL) and stop when a page yields no new results.
+
+    Args:
+        existing_urls: set of URLs already in the database
+        max_entries: cap on new entries to return
+        max_pages: cap on pages to scan
+
+    Returns:
+        List of new entry dicts
+    """
+    http = PoolManager(
+        retries=Retry(connect=3, read=2, backoff_factor=1),
+        headers=_build_request_headers(),
+    )
+
+    latest_dt = None
+    if latest_date:
+        latest_dt = _parse_added_date(latest_date)
+
+    all_entries: List[Dict[str, Any]] = []
+    page = 1
+    per_page = 100
+
+    while len(all_entries) < max_entries and page <= max_pages:
+        if page == 1:
+            url = f"{SURVEY_URL}?per_page={per_page}"
+        else:
+            url = f"{SURVEY_URL}?per_page={per_page}&page={page}"
+
+        try:
+            response = http.request("GET", url)
+            if response.status != 200:
+                print(f"Page {page}: HTTP {response.status}")
+                break
+
+            html = response.data.decode("utf-8", errors="replace")
+
+        except Exception as exc:
+            print(f"Error fetching page {page}: {exc}")
+            break
+
+        soup = BeautifulSoup(html, "html.parser")
+        tbody = soup.find("tbody", class_=re.compile(r"tw-divide-y"))
+        if not tbody:
+            print(f"Page {page}: No tbody found")
+            break
+
+        rows = tbody.find_all("tr")
+        page_entries = 0
+        page_new = 0
+
+        i = 0
+        while i < len(rows):
+            row = rows[i]
+
+            if "tw-border-none" in (row.get("class") or []):
+                i += 1
+                continue
+
+            main_row = row
+            detail_row = None
+            comment_row = None
+
+            if i + 1 < len(rows) and "tw-border-none" in (rows[i + 1].get("class") or []):
+                detail_row = rows[i + 1]
+                i += 1
+
+            if i + 1 < len(rows) and "tw-border-none" in (rows[i + 1].get("class") or []):
+                comment_row = rows[i + 1]
+                i += 1
+
+            entry = _parse_listing_row(main_row, detail_row, comment_row)
+
+            if entry and entry.get("url"):
+                page_entries += 1
+                if entry["url"] not in existing_urls:
+                    if latest_dt:
+                        entry_dt = _parse_added_date(entry.get("date_added"))
+                        if entry_dt and entry_dt <= latest_dt:
+                            i += 1
+                            continue
+                    all_entries.append(entry)
+                    page_new += 1
+
+                    if len(all_entries) >= max_entries:
+                        break
+
+            i += 1
+
+        if page_entries == 0:
+            print(f"Page {page}: No entries")
+            break
+
+        print(f"Page {page}: {page_new} new entries (total: {len(all_entries)})")
+
+        if page_new == 0:
+            break
+
+        page += 1
+
+    return all_entries
+
+
+def _parse_added_date(text: Optional[str]) -> Optional[datetime]:
+    if not text:
+        return None
+
+    if isinstance(text, datetime):
+        return text
+    if isinstance(text, date):
+        return datetime(text.year, text.month, text.day)
+    if not isinstance(text, str):
+        return None
+
+    text = text.strip()
+    formats = [
+        "%B %d, %Y",
+        "%b %d, %Y",
+        "%B %d %Y",
+        "%b %d %Y",
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 def save_scraped_data(entries: List[Dict[str, Any]], filepath: str = "applicant_data.json") -> None:
