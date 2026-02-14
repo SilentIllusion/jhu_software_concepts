@@ -1,3 +1,5 @@
+"""Tests for lightweight helpers in query_data."""
+
 import pytest
 
 import query_data
@@ -5,6 +7,7 @@ import query_data
 
 @pytest.mark.db
 def test_get_db_connection(monkeypatch):
+    """get_db_connection forwards to psycopg.connect with defaults."""
     sentinel = object()
     monkeypatch.setattr(query_data.psycopg, "connect", lambda **kwargs: sentinel)
     assert query_data.get_db_connection() is sentinel
@@ -12,6 +15,7 @@ def test_get_db_connection(monkeypatch):
 
 @pytest.mark.db
 def test_query_scalar(monkeypatch):
+    """query_scalar executes SQL and returns the first column of one row."""
     calls = []
 
     class Cur:

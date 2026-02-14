@@ -1,4 +1,4 @@
-"""Load corrected application data into the admission_results table."""
+"""Load corrected application data into the ``admission_results`` table."""
 
 import json
 
@@ -10,6 +10,7 @@ connection = psycopg.connect(
     password="04021986",
 )
 
+# Load the cleaned application records from disk.
 with open("corrected_application_data_v2.json", "r", encoding="UTF-8") as f:
     rows = json.load(f)
 data = []
@@ -30,7 +31,7 @@ for r in rows:
         r["llm-generated-program"],
         r["llm-generated-university"],
     )
-    data.append(row)    
+    data.append(row)
 
 with connection.cursor() as cur:
 
@@ -43,5 +44,6 @@ with connection.cursor() as cur:
         """,
         data,
     )
+# Commit once after bulk insert to keep the script fast.
 connection.commit()
 connection.close()

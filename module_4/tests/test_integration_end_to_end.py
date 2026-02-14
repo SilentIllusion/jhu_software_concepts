@@ -1,8 +1,11 @@
-﻿import pytest
+﻿"""End-to-end flows covering pull, update, and render behaviors."""
+
+import pytest
 
 
 @pytest.mark.integration
 def test_end_to_end_pull_update_render(run_module, monkeypatch, sample_entries):
+    """Pull data, update analysis, and render page with expected values."""
     run, app, fake_conn = run_module
     client = app.test_client()
 
@@ -25,6 +28,7 @@ def test_end_to_end_pull_update_render(run_module, monkeypatch, sample_entries):
 
 @pytest.mark.integration
 def test_multiple_pulls_with_overlap_keep_unique_rows(run_module, monkeypatch, sample_entries):
+    """Repeated pulls keep URLs unique even with overlapping batches."""
     run, app, fake_conn = run_module
     client = app.test_client()
 

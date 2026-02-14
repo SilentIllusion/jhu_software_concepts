@@ -1,3 +1,5 @@
+"""Additional branch coverage tests for run.py helpers and routes."""
+
 import types
 
 import pytest
@@ -7,6 +9,7 @@ import run
 
 @pytest.mark.db
 def test_get_db_connection(monkeypatch):
+    """get_db_connection forwards to psycopg.connect with defaults."""
     sentinel = object()
     monkeypatch.setattr(run.psycopg, "connect", lambda **kwargs: sentinel)
     assert run.get_db_connection() is sentinel
@@ -14,6 +17,7 @@ def test_get_db_connection(monkeypatch):
 
 @pytest.mark.db
 def test_query_scalar_params_and_none():
+    """query_scalar handles params and None result rows."""
     class Cur:
         def __init__(self):
             self.calls = []
@@ -32,6 +36,7 @@ def test_query_scalar_params_and_none():
 
 @pytest.mark.db
 def test_insert_entries_empty_and_duplicate():
+    """Insert helper skips empty input and dedupes URLs within batch."""
     class Cur:
         def __init__(self, conn):
             self.conn = conn
@@ -71,6 +76,7 @@ def test_insert_entries_empty_and_duplicate():
 
 @pytest.mark.buttons
 def test_run_scrape_job_running_flag(monkeypatch):
+    """Early return when a scrape job is already running."""
     run.scrape_state["running"] = True
     run.scrape_state["message"] = None
     run._run_scrape_job()
@@ -80,6 +86,7 @@ def test_run_scrape_job_running_flag(monkeypatch):
 
 @pytest.mark.buttons
 def test_run_scrape_job_exception(monkeypatch):
+    """Failure in scrape job sets failure message and clears running flag."""
     run.scrape_state["running"] = False
     monkeypatch.setattr(run, "get_db_connection", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     run._run_scrape_job()
@@ -89,6 +96,7 @@ def test_run_scrape_job_exception(monkeypatch):
 
 @pytest.mark.buttons
 def test_pull_data_async_path(monkeypatch):
+    """When SYNC_PULL_DATA is false the endpoint spawns a background thread."""
     started = {"thread": False}
 
     class FakeThread:
@@ -111,4 +119,5 @@ def test_pull_data_async_path(monkeypatch):
 
 @pytest.mark.analysis
 def test_format_two_decimals_none():
+    """Formatting helper returns None when input is None."""
     assert run._format_two_decimals(None) is None

@@ -1,3 +1,5 @@
+"""Unit tests for the cleaning helpers in scripts.clean."""
+
 import json
 
 import pytest
@@ -7,6 +9,7 @@ import scripts.clean as clean
 
 @pytest.mark.analysis
 def test_strip_and_normalize():
+    """HTML stripping and normalization edge cases."""
     assert clean._strip_html(None) is None
     assert clean._strip_html(5) is None
     assert clean._strip_html("   ") is None
@@ -18,6 +21,7 @@ def test_strip_and_normalize():
 
 @pytest.mark.analysis
 def test_clean_single_entry_and_extra_keys():
+    """Cleaning a single entry preserves extras and builds program."""
     entry = {
         "program_name": "CS",
         "university": "JHU",
@@ -33,6 +37,7 @@ def test_clean_single_entry_and_extra_keys():
 
 @pytest.mark.analysis
 def test_clean_data_and_messy_content():
+    """Clean list input and remove messy control characters."""
     rows = clean.clean_data(["bad", {"program": "X\x00", "comments": "Y   Z", "date_added": None}])
     assert len(rows) == 1
     assert rows[0]["program"] == "X"
@@ -42,6 +47,7 @@ def test_clean_data_and_messy_content():
 
 @pytest.mark.analysis
 def test_replace_none_save_load(tmp_path):
+    """Persist cleaned data and replace None with literal string."""
     fp = tmp_path / "data.json"
     clean.save_data([{"a": None, "b": [1, None]}], fp)
     loaded = clean.load_data(fp)
@@ -50,6 +56,7 @@ def test_replace_none_save_load(tmp_path):
 
 @pytest.mark.analysis
 def test_clean_additional_branches():
+    """Cover additional normalization branches and early returns."""
     # _normalize_value fallback path
     assert clean._normalize_value({"bad": "type"}) is None
 

@@ -1,3 +1,5 @@
+"""Tests for scraper helpers and network/persistence flows."""
+
 import json
 from datetime import date, datetime
 from pathlib import Path
@@ -28,6 +30,7 @@ class FakeHTTP:
 
 
 def make_html():
+    """Build minimal HTML snippet representing one result row."""
     return """
     <table><tbody class='tw-divide-y'>
       <tr>
@@ -53,6 +56,7 @@ def make_html():
 
 @pytest.mark.analysis
 def test_helper_parsers():
+    """Happy-path parsing of headers, GRE fields, GPA, decision, semester, type, degree."""
     assert "User-Agent" in scrape._build_request_headers()
     assert scrape._extract_gre_from_text("GRE 320 GRE V 160 AW 4.0") == ("320", "160", "4.0")
     assert scrape._extract_gre_from_badge_text("GRE 330 Verbal 166 AW 4.5") == ("330", "166", "4.5")
@@ -65,6 +69,7 @@ def test_helper_parsers():
 
 @pytest.mark.analysis
 def test_helper_edge_cases(monkeypatch):
+    """Edge-case parsing coverage for empty/invalid inputs."""
     # missing/empty inputs
     assert scrape._extract_gre_from_text("") == (None, None, None)
     assert scrape._extract_gre_from_badge_text(None) == (None, None, None)
@@ -90,6 +95,7 @@ def test_helper_edge_cases(monkeypatch):
 
 @pytest.mark.integration
 def test_scrape_data_and_new(monkeypatch):
+    """scrape_data and scrape_new_data handle success, errors, and stop conditions."""
     monkeypatch.setattr(
         scrape,
         "PoolManager",
@@ -120,6 +126,7 @@ def test_scrape_data_and_new(monkeypatch):
 
 @pytest.mark.analysis
 def test_dates_and_save(tmp_path):
+    """Date parsing utility and JSON persistence helper."""
     assert scrape._parse_added_date(None) is None
     assert scrape._parse_added_date(datetime(2026, 2, 1)) == datetime(2026, 2, 1)
     assert scrape._parse_added_date(date(2026, 2, 1)) == datetime(2026, 2, 1)
@@ -133,6 +140,7 @@ def test_dates_and_save(tmp_path):
 
 @pytest.mark.integration
 def test_import_fallback(monkeypatch):
+    """Import fallback works when package import fails."""
     import importlib.util
     import sys
 

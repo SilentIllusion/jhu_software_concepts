@@ -1,8 +1,11 @@
-﻿import pytest
+﻿"""Database insert and analysis data contract tests."""
+
+import pytest
 
 
 @pytest.mark.db
 def test_insert_on_pull_writes_rows_with_required_fields(run_module, monkeypatch, sample_entries):
+    """POST /pull-data inserts rows with non-null required fields."""
     run, app, fake_conn = run_module
     client = app.test_client()
 
@@ -24,6 +27,7 @@ def test_insert_on_pull_writes_rows_with_required_fields(run_module, monkeypatch
 
 @pytest.mark.db
 def test_idempotent_insert_does_not_duplicate_urls(run_module, sample_entries):
+    """Duplicate URLs are not inserted multiple times."""
     run, _, fake_conn = run_module
 
     inserted_first = run._insert_entries(fake_conn, sample_entries)
@@ -37,6 +41,7 @@ def test_idempotent_insert_does_not_duplicate_urls(run_module, sample_entries):
 
 @pytest.mark.db
 def test_get_analysis_data_returns_expected_keys(run_module):
+    """Analysis data dict includes all expected answer keys."""
     run, _, _ = run_module
 
     data = run.get_analysis_data()

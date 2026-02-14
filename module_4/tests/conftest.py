@@ -1,4 +1,6 @@
-﻿import sys
+﻿"""Shared fixtures and fakes for the Grad Cafe test suite."""
+
+import sys
 import types
 from pathlib import Path
 

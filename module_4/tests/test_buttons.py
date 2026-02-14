@@ -1,8 +1,11 @@
-﻿import pytest
+"""Button endpoint behavior and busy-state gating tests."""
+
+import pytest
 
 
 @pytest.mark.buttons
 def test_post_pull_data_returns_200_and_triggers_loader(run_module, monkeypatch, sample_entries):
+    """POST /pull-data returns 200 and triggers scrape + clean."""
     run, app, _ = run_module
     client = app.test_client()
 
@@ -28,6 +31,7 @@ def test_post_pull_data_returns_200_and_triggers_loader(run_module, monkeypatch,
 
 @pytest.mark.buttons
 def test_post_update_analysis_returns_200_when_not_busy(run_module):
+    """POST /update-analysis succeeds when no job is running."""
     _, app, _ = run_module
     client = app.test_client()
 
@@ -38,6 +42,7 @@ def test_post_update_analysis_returns_200_when_not_busy(run_module):
 
 @pytest.mark.buttons
 def test_busy_gating_returns_409_and_no_update(run_module):
+    """Busy state blocks both update and pull endpoints."""
     run, app, _ = run_module
     client = app.test_client()
 
@@ -47,3 +52,4 @@ def test_busy_gating_returns_409_and_no_update(run_module):
 
     assert response_update.status_code == 409
     assert response_pull.status_code == 409
+
