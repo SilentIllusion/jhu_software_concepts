@@ -16,7 +16,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 04021986
         ports:
-          - 5432:5432
+          - 8080:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d grad_cafe"
           --health-interval 10s
