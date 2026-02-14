@@ -8,4 +8,5 @@ module_3/app/scripts/update_gre_from_urls.py
 *.pyc
 *.png
 *.jpeg
+module_4/docs/_build/
 *.venv

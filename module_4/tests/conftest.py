@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-APP_DIR = Path(__file__).resolve().parents[1] / "src" / "app"
+APP_DIR = Path(__file__).resolve().parents[1] / "src"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
