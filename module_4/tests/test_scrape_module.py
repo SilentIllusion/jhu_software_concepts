@@ -241,7 +241,7 @@ def test_scrape_module_main_and_import_fallback(monkeypatch):
     fake_clean = types.SimpleNamespace(clean_data=lambda x: x, save_data=lambda x: None)
     monkeypatch.setitem(sys.modules, "clean", fake_clean)
 
-    path = Path("module_4/src/app/scripts/scrape.py")
+    path = Path(__file__).resolve().parents[1] / "src" / "app" / "scripts" / "scrape.py"
     spec = importlib.util.spec_from_file_location("scrape_fallback", path)
     mod = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
