@@ -3,7 +3,7 @@ import runpy
 
 import pytest
 
-from scripts import clean
+from src.app.scripts import clean
 
 
 @pytest.mark.analysis

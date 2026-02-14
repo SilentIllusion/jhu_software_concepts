@@ -9,7 +9,7 @@ import types
 from bs4 import BeautifulSoup
 import pytest
 
-import scripts.scrape as scrape
+from src.app.scripts import scrape as scrape
 
 
 class Resp:

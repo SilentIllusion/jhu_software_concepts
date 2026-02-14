@@ -1,5 +1,5 @@
 ﻿import io
-import runpy
+from src.app import run, query_data
 import types
 
 import pytest
@@ -37,7 +37,7 @@ class FakeConn:
 
 @pytest.mark.db
 def test_query_data_connection_and_scalar(monkeypatch):
-    import query_data
+
 
     sentinel = object()
     monkeypatch.setattr(query_data.psycopg, "connect", lambda **kwargs: sentinel)
@@ -67,7 +67,7 @@ def test_query_data_main(monkeypatch, capsys):
     fake_psycopg = types.SimpleNamespace(connect=lambda **kwargs: fake_conn)
     monkeypatch.setitem(__import__("sys").modules, "psycopg", fake_psycopg)
 
-    runpy.run_module("query_data", run_name="__main__")
+    run.run_module("query_data", run_name="__main__")
     out = capsys.readouterr().out
     assert "How many entries do you have in your database" in out
     assert "Do the numbers for question 8 change" in out

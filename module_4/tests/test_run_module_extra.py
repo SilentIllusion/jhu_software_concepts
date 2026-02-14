@@ -7,7 +7,7 @@ import pytest
 
 @pytest.mark.db
 def test_run_helper_branches(monkeypatch):
-    import run
+    from src.app import run
 
     sentinel = object()
     monkeypatch.setattr(run.psycopg, "connect", lambda **kwargs: sentinel)
