@@ -245,7 +245,7 @@ def load_data(filepath="applicant_data.json"):
         return json.load(file_handle)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Simple CLI execution:
     # 1) Load previously saved scraped data
     # 2) Clean/normalize it

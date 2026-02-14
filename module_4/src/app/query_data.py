@@ -210,7 +210,7 @@ def query_scalar(cur, sql, params=None):
     return row[0]
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     conn = get_db_connection()
     cur = conn.cursor()
 

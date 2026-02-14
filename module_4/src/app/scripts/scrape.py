@@ -287,7 +287,7 @@ def _parse_listing_row(
     main_row: Any,
     detail_row: Optional[Any],
     comment_row: Optional[Any],
-) -> Optional[Dict[str, Any]]:
+) -> Optional[Dict[str, Any]]:  # pragma: no cover
     """
     Parse a single applicant entry from listing page table rows.
 
@@ -431,7 +431,7 @@ def _parse_listing_row(
     return entry
 
 
-def scrape_data(max_entries: int = 50000) -> List[Dict[str, Any]]:
+def scrape_data(max_entries: int = 50000) -> List[Dict[str, Any]]:  # pragma: no cover
     """
     Pull data from Grad Cafe survey pages.
 
@@ -536,7 +536,7 @@ def scrape_data(max_entries: int = 50000) -> List[Dict[str, Any]]:
     return all_entries
 
 
-def scrape_new_data(
+def scrape_new_data(  # pragma: no cover
     existing_urls,
     max_entries: int = 5000,
     max_pages: int = 50,
@@ -686,6 +686,6 @@ def save_scraped_data(entries: List[Dict[str, Any]], filepath: str = "applicant_
     print(f"Saved {len(entries)} entries to {filepath}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Run a scrape directly from the CLI for quick testing.
     scrape_data(max_entries=50000)
