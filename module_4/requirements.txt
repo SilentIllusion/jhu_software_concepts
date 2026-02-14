@@ -2,3 +2,5 @@ flask
 psycopg
 beautifulsoup4
 urllib3
+pytest
+pytest-cov
