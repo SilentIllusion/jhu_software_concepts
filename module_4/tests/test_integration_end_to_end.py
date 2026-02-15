@@ -14,10 +14,12 @@ def test_end_to_end_pull_update_render(run_module, monkeypatch, sample_entries):
 
     pull_response = client.post("/pull-data", follow_redirects=True)
     assert pull_response.status_code == 200
+    assert pull_response.get_json()["ok"] is True
     assert len(fake_conn.rows) == 2
 
     update_response = client.post("/update-analysis", follow_redirects=True)
     assert update_response.status_code == 200
+    assert update_response.get_json()["ok"] is True
 
     analysis_response = client.get("/analysis")
     assert analysis_response.status_code == 200

@@ -7,10 +7,10 @@
   <h1>Analysis</h1>
   <div class="actions">
     <form method="post" action="{{ url_for('pages.pull_data') }}">
-      <button class="btn" title="Fetches new GradCafe results (if available) and adds them to your database." type="submit">Pull Data</button>
+      <button data-testid="pull-data-btn" class="btn" title="Fetches new GradCafe results (if available) and adds them to your database." type="submit">Pull Data</button>
     </form>
     <form method="post" action="{{ url_for('pages.update_analysis') }}">
-      <button class="btn btn-secondary" title="Refreshes this page with the latest data, but is disabled while Pull Data runs." type="submit">Update Analysis</button>
+      <button data-testid="update-analysis-btn" class="btn btn-secondary" title="Refreshes this page with the latest data, but is disabled while Pull Data runs." type="submit">Update Analysis</button>
     </form>
   </div>
 </div>

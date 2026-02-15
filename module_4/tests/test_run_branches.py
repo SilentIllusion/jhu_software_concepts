@@ -16,6 +16,15 @@ def test_get_db_connection(monkeypatch):
 
 
 @pytest.mark.db
+def test_get_db_connection_env(monkeypatch):
+    """Environment DATABASE_URL is honored."""
+    sentinel = object()
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example")
+    monkeypatch.setattr(run.psycopg, "connect", lambda url=None, **kwargs: sentinel if url == "postgresql://example" else None)
+    assert run.get_db_connection() is sentinel
+
+
+@pytest.mark.db
 def test_query_scalar_params_and_none():
     """query_scalar handles params and None result rows."""
     class Cur:
@@ -113,7 +122,8 @@ def test_pull_data_async_path(monkeypatch):
     app = run.create_app({"TESTING": True, "SYNC_PULL_DATA": False})
     client = app.test_client()
     resp = client.post("/pull-data")
-    assert resp.status_code == 302
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
     assert started["thread"] is True
 
 

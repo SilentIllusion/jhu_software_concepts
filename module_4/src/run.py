@@ -1,10 +1,11 @@
-﻿"""Flask app for Grad Cafe analytics and data refresh."""
+"""Flask app for Grad Cafe analytics and data refresh."""
 
+import os
 import threading
 import time
 
 import psycopg
-from flask import Blueprint, Flask, current_app, redirect, render_template, url_for
+from flask import Blueprint, Flask, current_app, jsonify, redirect, render_template, url_for
 
 from query_data import (
     SQL_AI_AVG_GPA,
@@ -45,12 +46,14 @@ def create_app(test_config=None):
 
 
 def get_db_connection():
-    """Create a new database connection."""
-    return psycopg.connect(
-        dbname="grad_cafe",
-        user="postgres",
-        password="04021986",
-    )
+    """Create a new database connection.
+
+    Prefers DATABASE_URL if set; otherwise falls back to local defaults.
+    """
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return psycopg.connect(url)
+    return psycopg.connect(dbname="grad_cafe", user="postgres")
 
 
 def query_scalar(cur, sql, params=None):
@@ -236,7 +239,7 @@ def pull_data():
     with scrape_lock:
         if scrape_state["running"]:
             scrape_state["message"] = "Pull Data is already running. Please wait until it finishes."
-            return scrape_state["message"], 409
+            return jsonify({"busy": True, "message": scrape_state["message"]}), 409
 
     if current_app.config.get("SYNC_PULL_DATA"):
         _run_scrape_job()
@@ -244,7 +247,7 @@ def pull_data():
         thread = threading.Thread(target=_run_scrape_job, daemon=True)
         thread.start()
 
-    return redirect(url_for("pages.analysis"), code=302)
+    return jsonify({"ok": True, "message": "Pull started"}), 200
 
 
 @pages.route("/update-analysis", methods=["POST"])
@@ -253,9 +256,9 @@ def update_analysis():
     with scrape_lock:
         if scrape_state["running"]:
             scrape_state["message"] = "Update Analysis is disabled while Pull Data is running."
-            return scrape_state["message"], 409
+            return jsonify({"busy": True, "message": scrape_state["message"]}), 409
 
-    return redirect(url_for("pages.analysis"), code=302)
+    return jsonify({"ok": True, "message": "Analysis refreshed"}), 200
 
 
 app = create_app()

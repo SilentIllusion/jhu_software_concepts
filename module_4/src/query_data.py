@@ -1,5 +1,7 @@
 """SQL queries and CLI output for Module 3 analytics."""
 
+import os
+
 import psycopg
 
 SQL_SELECT_EXISTING_URLS = "SELECT url FROM admission_results WHERE url IS NOT NULL"
@@ -190,12 +192,10 @@ WHERE gpa IS NOT NULL
 
 def get_db_connection():
     """Create a new database connection."""
-    connection = psycopg.connect(
-        dbname="grad_cafe",
-        user="postgres",
-        password="04021986",
-    )
-    return connection
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return psycopg.connect(url)
+    return psycopg.connect(dbname="grad_cafe", user="postgres")
 
 
 def query_scalar(cur, sql, params=None):

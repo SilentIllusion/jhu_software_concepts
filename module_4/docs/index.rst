@@ -9,3 +9,4 @@ Grad Cafe Analytics Documentation
    architecture
    api
    testing
+   ops

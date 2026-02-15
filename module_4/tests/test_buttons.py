@@ -25,6 +25,7 @@ def test_post_pull_data_returns_200_and_triggers_loader(run_module, monkeypatch,
     response = client.post("/pull-data", follow_redirects=True)
 
     assert response.status_code == 200
+    assert response.get_json()["ok"] is True
     assert called["scrape"] == 1
     assert called["clean"] == 1
 
@@ -38,6 +39,7 @@ def test_post_update_analysis_returns_200_when_not_busy(run_module):
     response = client.post("/update-analysis", follow_redirects=True)
 
     assert response.status_code == 200
+    assert response.get_json()["ok"] is True
 
 
 @pytest.mark.buttons
@@ -52,4 +54,5 @@ def test_busy_gating_returns_409_and_no_update(run_module):
 
     assert response_update.status_code == 409
     assert response_pull.status_code == 409
-
+    assert response_update.get_json()["busy"] is True
+    assert response_pull.get_json()["busy"] is True
