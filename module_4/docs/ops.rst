@@ -8,7 +8,7 @@ Busy-state policy
 * Tests can flip ``SYNC_PULL_DATA=True`` to run pulls synchronously without threads.
 
 Idempotency & uniqueness
------------------------
+------------------------
 
 * Rows are deduped in-memory on URL before insert. ``admission_results.url`` should be unique in the DB to enforce at the storage layer.
 * ``scrape_new_data`` also skips URLs already present.
