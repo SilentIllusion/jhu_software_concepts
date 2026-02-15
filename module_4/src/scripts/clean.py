@@ -6,6 +6,7 @@ LLM-based program/university standardization is done via llm_hosting (run separa
 
 import json
 import re
+from pathlib import Path
 
 from bs4 import BeautifulSoup
 
@@ -215,7 +216,7 @@ def _replace_none_with_string(obj):
     return obj
 
 
-def save_data(entries, filepath="applicant_data.json"):
+def save_data(entries, filepath=None):
     """
     Save cleaned data to a JSON file.
 
@@ -223,7 +224,13 @@ def save_data(entries, filepath="applicant_data.json"):
         - None values are serialized as the string "none" (via _replace_none_with_string).
         - ensure_ascii=False preserves non-ASCII characters.
     """
-    with open(filepath, "w", encoding="utf-8") as file_handle:
+    target = (
+        Path(__file__).resolve().parents[2] / "applicant_data.json"
+        if filepath is None
+        else Path(filepath)
+    )
+
+    with open(target, "w", encoding="utf-8") as file_handle:
         json.dump(
             _replace_none_with_string(entries),
             file_handle,
@@ -231,17 +238,23 @@ def save_data(entries, filepath="applicant_data.json"):
             ensure_ascii=False,
         )
 
-    print(f"Saved {len(entries)} entries to {filepath}")
+    print(f"Saved {len(entries)} entries to {target}")
 
 
-def load_data(filepath="applicant_data.json"):
+def load_data(filepath=None):
     """
     Load data from a JSON file.
 
     Returns:
         Parsed JSON object (usually a list of dict entries).
     """
-    with open(filepath, "r", encoding="utf-8") as file_handle:
+    target = (
+        Path(__file__).resolve().parents[2] / "applicant_data.json"
+        if filepath is None
+        else Path(filepath)
+    )
+
+    with open(target, "r", encoding="utf-8") as file_handle:
         return json.load(file_handle)
 
 

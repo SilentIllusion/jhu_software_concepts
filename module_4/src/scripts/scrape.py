@@ -12,6 +12,7 @@ Notes:
 import json
 import re
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from bs4 import BeautifulSoup
@@ -672,7 +673,7 @@ def _parse_added_date(text: Optional[str]) -> Optional[datetime]:
     return None
 
 
-def save_scraped_data(entries: List[Dict[str, Any]], filepath: str = "applicant_data.json") -> None:
+def save_scraped_data(entries: List[Dict[str, Any]], filepath: Optional[str] = None) -> None:
     """
     Save scraped data to a JSON file.
 
@@ -680,10 +681,16 @@ def save_scraped_data(entries: List[Dict[str, Any]], filepath: str = "applicant_
         entries (List[Dict[str, Any]]): Scraped entries.
         filepath (str): Output file path.
     """
-    with open(filepath, "w", encoding="utf-8") as file_handle:
+    target = (
+        Path(__file__).resolve().parents[2] / "applicant_data.json"
+        if filepath is None
+        else Path(filepath)
+    )
+
+    with open(target, "w", encoding="utf-8") as file_handle:
         json.dump(entries, file_handle, indent=2, ensure_ascii=False)
 
-    print(f"Saved {len(entries)} entries to {filepath}")
+    print(f"Saved {len(entries)} entries to {target}")
 
 
 if __name__ == "__main__":  # pragma: no cover
