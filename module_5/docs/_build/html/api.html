@@ -1,0 +1,316 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; Grad Cafe Analytics  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Testing Guide" href="testing.html" />
+    <link rel="prev" title="Architecture" href="architecture.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Grad Cafe Analytics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#scripts.scrape.save_scraped_data"><code class="docutils literal notranslate"><span class="pre">save_scraped_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scripts.scrape.scrape_data"><code class="docutils literal notranslate"><span class="pre">scrape_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scripts.scrape.scrape_new_data"><code class="docutils literal notranslate"><span class="pre">scrape_new_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scripts.clean.clean_data"><code class="docutils literal notranslate"><span class="pre">clean_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scripts.clean.load_data"><code class="docutils literal notranslate"><span class="pre">load_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scripts.clean.save_data"><code class="docutils literal notranslate"><span class="pre">save_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#load_data.load_corrected_data"><code class="docutils literal notranslate"><span class="pre">load_corrected_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#query_data.get_db_connection"><code class="docutils literal notranslate"><span class="pre">get_db_connection()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#query_data.query_scalar"><code class="docutils literal notranslate"><span class="pre">query_scalar()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.analysis"><code class="docutils literal notranslate"><span class="pre">analysis()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.create_app"><code class="docutils literal notranslate"><span class="pre">create_app()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.get_analysis_data"><code class="docutils literal notranslate"><span class="pre">get_analysis_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.get_db_connection"><code class="docutils literal notranslate"><span class="pre">get_db_connection()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.index"><code class="docutils literal notranslate"><span class="pre">index()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.pull_data"><code class="docutils literal notranslate"><span class="pre">pull_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.query_scalar"><code class="docutils literal notranslate"><span class="pre">query_scalar()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run.update_analysis"><code class="docutils literal notranslate"><span class="pre">update_analysis()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ops.html">Operational Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Grad Cafe Analytics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-scripts.scrape">
+<span id="api-reference"></span><h1>API Reference<a class="headerlink" href="#module-scripts.scrape" title="Link to this heading"></a></h1>
+<p>Grad Cafe Web Scraper - Module 2 Assignment</p>
+<p>Scrapes applicant admission data from The Grad Cafe survey pages.
+Uses urllib3 for HTTP requests and BeautifulSoup for HTML parsing.</p>
+<p>Notes:
+- This module focuses on scraping and basic parsing.
+- Data cleaning and persistence should live in clean.py (imported below).</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="scripts.scrape.save_scraped_data">
+<span class="sig-prename descclassname"><span class="pre">scripts.scrape.</span></span><span class="sig-name descname"><span class="pre">save_scraped_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'applicant_data.json'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/scripts/scrape.html#save_scraped_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scripts.scrape.save_scraped_data" title="Link to this definition"></a></dt>
+<dd><p>Save scraped data to a JSON file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>entries</strong> (<em>List</em><em>[</em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – Scraped entries.</p></li>
+<li><p><strong>filepath</strong> (<em>str</em>) – Output file path.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="scripts.scrape.scrape_data">
+<span class="sig-prename descclassname"><span class="pre">scripts.scrape.</span></span><span class="sig-name descname"><span class="pre">scrape_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/scripts/scrape.html#scrape_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scripts.scrape.scrape_data" title="Link to this definition"></a></dt>
+<dd><p>Pull data from Grad Cafe survey pages.</p>
+<p>Paginates through results until max_entries is reached or no more rows exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>max_entries</strong> (<em>int</em>) – Maximum number of entries to scrape.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of scraped applicant entry dictionaries.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Dict[str, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="scripts.scrape.scrape_new_data">
+<span class="sig-prename descclassname"><span class="pre">scripts.scrape.</span></span><span class="sig-name descname"><span class="pre">scrape_new_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">existing_urls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_pages</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latest_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/scripts/scrape.html#scrape_new_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scripts.scrape.scrape_new_data" title="Link to this definition"></a></dt>
+<dd><p>Scrape only new entries (by URL) and stop when a page yields no new results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>existing_urls</strong> – set of URLs already in the database</p></li>
+<li><p><strong>max_entries</strong> – cap on new entries to return</p></li>
+<li><p><strong>max_pages</strong> – cap on pages to scan</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of new entry dicts</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-scripts.clean">Grad Cafe Data Cleaning - Module 2 Assignment
+Cleans scraped applicant data: removes HTML, normalizes values, structures output.
+LLM-based program/university standardization is done via llm_hosting (run separately).</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="scripts.clean.clean_data">
+<span class="sig-prename descclassname"><span class="pre">scripts.clean.</span></span><span class="sig-name descname"><span class="pre">clean_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entries</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/scripts/clean.html#clean_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scripts.clean.clean_data" title="Link to this definition"></a></dt>
+<dd><p>Convert raw scraped data into a structured, cleaned format.</p>
+<dl class="simple">
+<dt>Cleaning performed:</dt><dd><ul class="simple">
+<li><p>HTML stripping for all string fields (via _normalize_value)</p></li>
+<li><p>unavailable values normalized to None</p></li>
+<li><p>additional cleanup for specific text fields (program/comments)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>entries</strong> – list of dicts (raw scraped entries)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of cleaned dicts with consistent keys and normalized values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="scripts.clean.load_data">
+<span class="sig-prename descclassname"><span class="pre">scripts.clean.</span></span><span class="sig-name descname"><span class="pre">load_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'applicant_data.json'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/scripts/clean.html#load_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scripts.clean.load_data" title="Link to this definition"></a></dt>
+<dd><p>Load data from a JSON file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Parsed JSON object (usually a list of dict entries).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="scripts.clean.save_data">
+<span class="sig-prename descclassname"><span class="pre">scripts.clean.</span></span><span class="sig-name descname"><span class="pre">save_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'applicant_data.json'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/scripts/clean.html#save_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scripts.clean.save_data" title="Link to this definition"></a></dt>
+<dd><p>Save cleaned data to a JSON file.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>None values are serialized as the string “none” (via _replace_none_with_string).</p></li>
+<li><p>ensure_ascii=False preserves non-ASCII characters.</p></li>
+</ul>
+</dd></dl>
+
+<p id="module-load_data">Load corrected application data into the <code class="docutils literal notranslate"><span class="pre">admission_results</span></code> table.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="load_data.load_corrected_data">
+<span class="sig-prename descclassname"><span class="pre">load_data.</span></span><span class="sig-name descname"><span class="pre">load_corrected_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'corrected_application_data_v2.json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/load_data.html#load_corrected_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#load_data.load_corrected_data" title="Link to this definition"></a></dt>
+<dd><p>Load the corrected Grad Cafe data JSON file into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> – Path to the corrected JSON file.</p></li>
+<li><p><strong>conn</strong> – Optional existing psycopg connection; when omitted a new one is created.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Number of rows inserted.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-query_data">SQL queries and CLI output for Module 3 analytics.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="query_data.get_db_connection">
+<span class="sig-prename descclassname"><span class="pre">query_data.</span></span><span class="sig-name descname"><span class="pre">get_db_connection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/query_data.html#get_db_connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#query_data.get_db_connection" title="Link to this definition"></a></dt>
+<dd><p>Create a new database connection.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="query_data.query_scalar">
+<span class="sig-prename descclassname"><span class="pre">query_data.</span></span><span class="sig-name descname"><span class="pre">query_scalar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cur</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sql</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/query_data.html#query_scalar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#query_data.query_scalar" title="Link to this definition"></a></dt>
+<dd><p>Run a query that returns a single scalar value.</p>
+</dd></dl>
+
+<p id="module-run">Flask app for Grad Cafe analytics and data refresh.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="run.analysis">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">analysis</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#analysis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.analysis" title="Link to this definition"></a></dt>
+<dd><p>Render the analytics dashboard.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.create_app">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">create_app</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">test_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#create_app"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.create_app" title="Link to this definition"></a></dt>
+<dd><p>Create and configure the Flask app.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.get_analysis_data">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">get_analysis_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#get_analysis_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.get_analysis_data" title="Link to this definition"></a></dt>
+<dd><p>Return all dashboard answers as a dict.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.get_db_connection">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">get_db_connection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#get_db_connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.get_db_connection" title="Link to this definition"></a></dt>
+<dd><p>Create a new database connection.</p>
+<p>Prefers DATABASE_URL if set; otherwise falls back to local defaults.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.index">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.index" title="Link to this definition"></a></dt>
+<dd><p>Redirect root to analysis page.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.pull_data">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">pull_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#pull_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.pull_data" title="Link to this definition"></a></dt>
+<dd><p>Start a scrape job if one is not already running.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.query_scalar">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">query_scalar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cur</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sql</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#query_scalar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.query_scalar" title="Link to this definition"></a></dt>
+<dd><p>Run a query that returns a single scalar value.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="run.update_analysis">
+<span class="sig-prename descclassname"><span class="pre">run.</span></span><span class="sig-name descname"><span class="pre">update_analysis</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/run.html#update_analysis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#run.update_analysis" title="Link to this definition"></a></dt>
+<dd><p>Refresh analysis when no scrape job is running.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="architecture.html" class="btn btn-neutral float-left" title="Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="testing.html" class="btn btn-neutral float-right" title="Testing Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Grad Cafe Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

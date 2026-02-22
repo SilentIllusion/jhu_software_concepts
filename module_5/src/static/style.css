@@ -1,0 +1,155 @@
+/* Color palette from Module_1/personal_website/app/static/style.css */
+:root {
+  --primary-color: #E63988;
+  --secondary-color: #FF8FB1;
+  --accent-color: #E63988;
+  --dark-color: #3F334D;
+  --light-color: #F9F7F2;
+  --gray-color: #95a5a6;
+  --text-color: #3F334D;
+  --text-light: #6D5D7A;
+  --nav-bg: #3F334D;
+  --nav-active: #FF8FB1;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --transition: all 0.3s ease;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text-color);
+  background: linear-gradient(135deg, #f9f7f2 0%, #ffe3ef 60%, #f9f7f2 100%);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+nav {
+  background: var(--nav-bg);
+  padding: 16px 24px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-size: 1.1rem;
+}
+
+nav a:hover {
+  color: var(--nav-active);
+}
+
+.content {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+h1 {
+  font-size: 2.2rem;
+  color: var(--dark-color);
+  margin-bottom: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.helper-text {
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+.status {
+  background: #fff3f7;
+  border: 1px solid #f2c2d6;
+  color: var(--dark-color);
+  padding: 10px 14px;
+  border-radius: var(--border-radius);
+  margin-bottom: 18px;
+}
+
+.questions {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+ol {
+  padding-left: 22px;
+}
+
+li {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0eef2;
+}
+
+li:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+strong {
+  color: var(--primary-color);
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.7rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .questions {
+    padding: 18px;
+  }
+}

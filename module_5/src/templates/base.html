@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+   <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}{% endblock %}</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+   </head>
+   <body>
+    <nav>
+        <a href="{{ url_for('pages.analysis') }}">Grad Cafe Analysis</a>
+    </nav>
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+   </body>
+</html>

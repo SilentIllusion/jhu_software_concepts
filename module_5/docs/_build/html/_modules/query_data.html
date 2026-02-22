@@ -1,0 +1,423 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>query_data &mdash; Grad Cafe Analytics  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Grad Cafe Analytics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing.html">Testing Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ops.html">Operational Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Grad Cafe Analytics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">query_data</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for query_data</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;SQL queries and CLI output for Module 3 analytics.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">psycopg</span>
+
+<span class="n">SQL_SELECT_EXISTING_URLS</span> <span class="o">=</span> <span class="s2">&quot;SELECT url FROM admission_results WHERE url IS NOT NULL&quot;</span>
+
+<span class="n">SQL_LATEST_DATE_ADDED</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT date_added</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE date_added IS NOT NULL</span>
+<span class="s2">ORDER BY date_added DESC</span>
+<span class="s2">LIMIT 1</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_INSERT_ADMISSION_RESULTS</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">INSERT INTO admission_results</span>
+<span class="s2">(program, comments, date_added, url, status, term, us_or_international,</span>
+<span class="s2"> gre, gre_v, gpa, gre_aw, degree, llm_generated_program, llm_generated_university)</span>
+<span class="s2">VALUES (</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">)</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_INTL_PCT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(</span>
+<span class="s2">    100.0 * SUM(CASE</span>
+<span class="s2">        WHEN us_or_international NOT IN (&#39;American&#39;, &#39;Other&#39;)</span>
+<span class="s2">             AND us_or_international IS NOT NULL</span>
+<span class="s2">        THEN 1 ELSE 0 END</span>
+<span class="s2">    ) / NULLIF(COUNT(*), 0),</span>
+<span class="s2">2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_COUNT_FALL_2026</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE term = &#39;Fall 2026&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GPA</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gpa IS NOT NULL</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GRE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gre)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gre IS NOT NULL AND gre &gt; 0</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GRE_V</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gre_v)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gre_v IS NOT NULL AND gre_v &gt; 0</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GRE_AW</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gre_aw)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gre_aw IS NOT NULL AND gre_aw &gt; 0</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GPA_AMERICAN_FALL_2026</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gpa IS NOT NULL</span>
+<span class="s2">  AND us_or_international = &#39;American&#39;</span>
+<span class="s2">  AND term = &#39;Fall 2026&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_PCT_FALL_2026_ACCEPT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(</span>
+<span class="s2">    100.0 * SUM(CASE</span>
+<span class="s2">        WHEN status ILIKE &#39;Accepted%&#39; THEN 1 ELSE 0 END</span>
+<span class="s2">    ) / NULLIF(COUNT(*), 0),</span>
+<span class="s2">2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE term = &#39;Fall 2026&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GPA_FALL_2026_ACCEPT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gpa IS NOT NULL</span>
+<span class="s2">  AND term = &#39;Fall 2026&#39;</span>
+<span class="s2">  AND status ILIKE &#39;%Accepted%&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_JHU_MS_CS_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE program ILIKE &#39;%Computer Science%&#39;</span>
+<span class="s2">  AND (program ILIKE &#39;%Johns Hopkins%&#39; OR program ILIKE &#39;%JHU%&#39;)</span>
+<span class="s2">  AND degree ILIKE &#39;%Master%&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_CS_PHD_2026_TOP_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE term ILIKE &#39;</span><span class="si">%2026%</span><span class="s2">&#39;</span>
+<span class="s2">  AND status ILIKE &#39;Accepted%&#39;</span>
+<span class="s2">  AND degree ILIKE &#39;%PhD%&#39;</span>
+<span class="s2">  AND program ILIKE &#39;%Computer Science%&#39;</span>
+<span class="s2">  AND (</span>
+<span class="s2">        program ILIKE &#39;</span><span class="si">%G</span><span class="s2">eorgetown%&#39;</span>
+<span class="s2">     OR program ILIKE &#39;%MIT%&#39;</span>
+<span class="s2">     OR program ILIKE &#39;%Massachusetts Institute of Technology%&#39;</span>
+<span class="s2">     OR program ILIKE &#39;%Stanford%&#39;</span>
+<span class="s2">     OR program ILIKE &#39;%Carnegie Mellon%&#39;</span>
+<span class="s2">  )</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_CS_PHD_2026_TOP_COUNT_LLM</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE term ILIKE &#39;</span><span class="si">%2026%</span><span class="s2">&#39;</span>
+<span class="s2">  AND status ILIKE &#39;Accepted%&#39;</span>
+<span class="s2">  AND degree ILIKE &#39;%PhD%&#39;</span>
+<span class="s2">  AND llm_generated_program ILIKE &#39;%Computer Science%&#39;</span>
+<span class="s2">  AND (</span>
+<span class="s2">        llm_generated_university ILIKE &#39;</span><span class="si">%G</span><span class="s2">eorgetown%&#39;</span>
+<span class="s2">     OR llm_generated_university ILIKE &#39;%MIT%&#39;</span>
+<span class="s2">     OR llm_generated_university ILIKE &#39;%Massachusetts Institute of Technology%&#39;</span>
+<span class="s2">     OR llm_generated_university ILIKE &#39;%Stanford%&#39;</span>
+<span class="s2">     OR llm_generated_university ILIKE &#39;%Carnegie Mellon%&#39;</span>
+<span class="s2">  )</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_TOTAL_AI_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE program ILIKE &#39;%Artificial Intelligence%&#39;</span>
+<span class="s2">  AND status ILIKE &#39;%Accepted%&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AI_AVG_GPA</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gpa IS NOT NULL</span>
+<span class="s2">  AND program ILIKE &#39;%Artificial Intelligence%&#39;</span>
+<span class="s2">  AND status ILIKE &#39;%Accepted%&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_APPLICANT_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_INTL_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE us_or_international NOT IN (&#39;American&#39;, &#39;Other&#39;)</span>
+<span class="s2">  AND us_or_international IS NOT NULL</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_US_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE us_or_international = &#39;American&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_OTHER_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE us_or_international = &#39;Other&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_ACCEPTANCE_COUNT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT COUNT(*)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE status ILIKE &#39;Accepted%&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_ACCEPTANCE_PCT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(</span>
+<span class="s2">    100.0 * SUM(CASE</span>
+<span class="s2">        WHEN status ILIKE &#39;Accepted%&#39; THEN 1 ELSE 0 END</span>
+<span class="s2">    ) / NULLIF(COUNT(*), 0),</span>
+<span class="s2">2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">SQL_AVG_GPA_ACCEPTANCE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">FROM admission_results</span>
+<span class="s2">WHERE gpa IS NOT NULL</span>
+<span class="s2">  AND status ILIKE &#39;Accepted%&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="get_db_connection">
+<a class="viewcode-back" href="../api.html#query_data.get_db_connection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_db_connection</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new database connection.&quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DATABASE_URL&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">dbname</span><span class="o">=</span><span class="s2">&quot;grad_cafe&quot;</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="s2">&quot;postgres&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="query_scalar">
+<a class="viewcode-back" href="../api.html#query_data.query_scalar">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run a query that returns a single scalar value.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="n">count_fall_2026</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_COUNT_FALL_2026</span><span class="p">)</span>
+    <span class="n">intl_pct</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_INTL_PCT</span><span class="p">)</span>
+    <span class="n">avg_gpa</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GPA</span><span class="p">)</span>
+    <span class="n">avg_gre</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GRE</span><span class="p">)</span>
+    <span class="n">avg_gre_v</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GRE_V</span><span class="p">)</span>
+    <span class="n">avg_gre_aw</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GRE_AW</span><span class="p">)</span>
+
+    <span class="n">avg_gpa_american_fall_2026</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span>
+        <span class="n">cur</span><span class="p">,</span>
+        <span class="n">SQL_AVG_GPA_AMERICAN_FALL_2026</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">pct_fall_2026_accept</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span>
+        <span class="n">cur</span><span class="p">,</span>
+        <span class="n">SQL_PCT_FALL_2026_ACCEPT</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">avg_gpa_fall_2026_accept</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GPA_FALL_2026_ACCEPT</span><span class="p">)</span>
+
+    <span class="n">jhu_ms_cs_count</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_JHU_MS_CS_COUNT</span><span class="p">)</span>
+
+    <span class="n">cs_phd_2026_top_count</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_CS_PHD_2026_TOP_COUNT</span><span class="p">)</span>
+
+    <span class="n">cs_phd_2026_top_count_llm</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_CS_PHD_2026_TOP_COUNT_LLM</span><span class="p">)</span>
+
+    <span class="n">total_ai_count</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_TOTAL_AI_COUNT</span><span class="p">)</span>
+
+    <span class="n">ai_avg_gpa</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AI_AVG_GPA</span><span class="p">)</span>
+
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">counts_change</span> <span class="o">=</span> <span class="n">cs_phd_2026_top_count</span> <span class="o">!=</span> <span class="n">cs_phd_2026_top_count_llm</span>
+    <span class="n">change_explanation</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Yes. Downloaded fields count = </span><span class="si">{</span><span class="n">cs_phd_2026_top_count</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;LLM fields count = </span><span class="si">{</span><span class="n">cs_phd_2026_top_count_llm</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="k">if</span> <span class="n">counts_change</span>
+        <span class="k">else</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No. Both methods return </span><span class="si">{</span><span class="n">cs_phd_2026_top_count</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="k">if</span> <span class="n">cs_phd_2026_top_count</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="s2">&quot;No. Both methods returned no result.&quot;</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;How many entries do you have in your database who have applied for Fall 2026? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">count_fall_2026</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;What percentage of entries are from international students &quot;</span>
+        <span class="s2">&quot;(not American or Other) (to two decimal places)? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">intl_pct</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;What is the average GPA, GRE, GRE V, GRE AW of applicants who provide &quot;</span>
+        <span class="s2">&quot;these metrics? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;GPA </span><span class="si">{</span><span class="n">avg_gpa</span><span class="si">}</span><span class="s2">, GRE </span><span class="si">{</span><span class="n">avg_gre</span><span class="si">}</span><span class="s2">, GRE V </span><span class="si">{</span><span class="n">avg_gre_v</span><span class="si">}</span><span class="s2">, GRE AW </span><span class="si">{</span><span class="n">avg_gre_aw</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;What is their average GPA of American students in Fall 2026? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">avg_gpa_american_fall_2026</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;What percent of entries for Fall 2026 are Acceptances? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pct_fall_2026_accept</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;What is the average GPA of applicants who applied for Fall 2026 &quot;</span>
+        <span class="s2">&quot;who were accepted? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">avg_gpa_fall_2026_accept</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;How many entries are from applicants who applied to JHU for a &quot;</span>
+        <span class="s2">&quot;masters degrees in Computer Science? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">jhu_ms_cs_count</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;How many entries from 2026 are acceptances from applicants who applied &quot;</span>
+        <span class="s2">&quot;to Georgetown University, MIT, Stanford University, or Carnegie Mellon &quot;</span>
+        <span class="s2">&quot;University for a PhD in Computer Science? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cs_phd_2026_top_count</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;Do the numbers for question 8 change if you use LLM Generated Fields &quot;</span>
+        <span class="s2">&quot;(rather than your downloaded fields)? &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Yes&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">counts_change</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;No&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">change_explanation</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;How many entries are from applicants that applied to Artificial Intelligence &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;programs? </span><span class="si">{</span><span class="n">total_ai_count</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;What is the average GPA of applicants that were accepted to a Artificial &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Intelligence programs? </span><span class="si">{</span><span class="n">ai_avg_gpa</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Grad Cafe Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

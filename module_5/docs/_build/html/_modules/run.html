@@ -1,0 +1,397 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>run &mdash; Grad Cafe Analytics  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Grad Cafe Analytics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing.html">Testing Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ops.html">Operational Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Grad Cafe Analytics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">run</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for run</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Flask app for Grad Cafe analytics and data refresh.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">psycopg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">current_app</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render_template</span><span class="p">,</span> <span class="n">url_for</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">query_data</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SQL_AI_AVG_GPA</span><span class="p">,</span>
+    <span class="n">SQL_AVG_GPA</span><span class="p">,</span>
+    <span class="n">SQL_AVG_GPA_AMERICAN_FALL_2026</span><span class="p">,</span>
+    <span class="n">SQL_AVG_GPA_FALL_2026_ACCEPT</span><span class="p">,</span>
+    <span class="n">SQL_AVG_GRE</span><span class="p">,</span>
+    <span class="n">SQL_AVG_GRE_AW</span><span class="p">,</span>
+    <span class="n">SQL_AVG_GRE_V</span><span class="p">,</span>
+    <span class="n">SQL_COUNT_FALL_2026</span><span class="p">,</span>
+    <span class="n">SQL_CS_PHD_2026_TOP_COUNT</span><span class="p">,</span>
+    <span class="n">SQL_CS_PHD_2026_TOP_COUNT_LLM</span><span class="p">,</span>
+    <span class="n">SQL_INSERT_ADMISSION_RESULTS</span><span class="p">,</span>
+    <span class="n">SQL_INTL_PCT</span><span class="p">,</span>
+    <span class="n">SQL_JHU_MS_CS_COUNT</span><span class="p">,</span>
+    <span class="n">SQL_LATEST_DATE_ADDED</span><span class="p">,</span>
+    <span class="n">SQL_PCT_FALL_2026_ACCEPT</span><span class="p">,</span>
+    <span class="n">SQL_SELECT_EXISTING_URLS</span><span class="p">,</span>
+    <span class="n">SQL_TOTAL_AI_COUNT</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scripts.clean</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_data</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scripts.scrape</span><span class="w"> </span><span class="kn">import</span> <span class="n">scrape_new_data</span>
+
+<span class="n">pages</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="s2">&quot;pages&quot;</span><span class="p">,</span> <span class="vm">__name__</span><span class="p">)</span>
+
+<span class="n">scrape_state</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;running&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;last_run&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+<span class="n">scrape_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="create_app">
+<a class="viewcode-back" href="../api.html#run.create_app">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_app</span><span class="p">(</span><span class="n">test_config</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create and configure the Flask app.&quot;&quot;&quot;</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;TESTING&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;SYNC_PULL_DATA&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">test_config</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">test_config</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">pages</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">app</span></div>
+
+
+
+<div class="viewcode-block" id="get_db_connection">
+<a class="viewcode-back" href="../api.html#run.get_db_connection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_db_connection</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new database connection.</span>
+
+<span class="sd">    Prefers DATABASE_URL if set; otherwise falls back to local defaults.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DATABASE_URL&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">dbname</span><span class="o">=</span><span class="s2">&quot;grad_cafe&quot;</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="s2">&quot;postgres&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="query_scalar">
+<a class="viewcode-back" href="../api.html#run.query_scalar">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run a query that returns a single scalar value.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_format_two_decimals</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format percentage-like values with two decimals.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_existing_urls</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a set of URLs already present in the database.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">SQL_SELECT_EXISTING_URLS</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">urls</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">urls</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">urls</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_latest_date_added</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the most recent date_added value, if present.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">SQL_LATEST_DATE_ADDED</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_insert_entries</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">entries</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Insert scraped entries and return the number inserted.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen_urls</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="n">row_url</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">row_url</span> <span class="ow">and</span> <span class="n">row_url</span> <span class="ow">in</span> <span class="n">seen_urls</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">row_url</span><span class="p">:</span>
+            <span class="n">seen_urls</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">row_url</span><span class="p">)</span>
+
+        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;program&quot;</span><span class="p">),</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;comments&quot;</span><span class="p">),</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;date_added&quot;</span><span class="p">),</span>
+                <span class="n">row_url</span><span class="p">,</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;applicant_status&quot;</span><span class="p">),</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;semester_year&quot;</span><span class="p">),</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;international_american&quot;</span><span class="p">),</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gre_score&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gre_score&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gre_v_score&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gre_v_score&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gpa&quot;</span><span class="p">),</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gre_aw&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gre_aw&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;degree_type&quot;</span><span class="p">),</span>
+                <span class="kc">None</span><span class="p">,</span>
+                <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="n">SQL_INSERT_ADMISSION_RESULTS</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_scrape_job</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Background job to scrape new data and update the database.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">scrape_lock</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;running&quot;</span><span class="p">]:</span>
+            <span class="k">return</span>
+        <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;running&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Pull Data is running. This may take several minutes.&quot;</span>
+
+    <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">inserted</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+        <span class="n">existing_urls</span> <span class="o">=</span> <span class="n">_get_existing_urls</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+        <span class="n">latest_date</span> <span class="o">=</span> <span class="n">_get_latest_date_added</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+        <span class="n">new_entries</span> <span class="o">=</span> <span class="n">scrape_new_data</span><span class="p">(</span><span class="n">existing_urls</span><span class="p">,</span> <span class="n">latest_date</span><span class="o">=</span><span class="n">latest_date</span><span class="p">)</span>
+        <span class="n">cleaned_entries</span> <span class="o">=</span> <span class="n">clean_data</span><span class="p">(</span><span class="n">new_entries</span><span class="p">)</span>
+        <span class="n">inserted</span> <span class="o">=</span> <span class="n">_insert_entries</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">cleaned_entries</span><span class="p">)</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">)</span>
+        <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Pull Data completed. Added </span><span class="si">{</span><span class="n">inserted</span><span class="si">}</span><span class="s2"> new rows in </span><span class="si">{</span><span class="n">elapsed</span><span class="si">}</span><span class="s2">s.&quot;</span>
+        <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;last_run&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Pull Data failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">scrape_lock</span><span class="p">:</span>
+            <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;running&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="get_analysis_data">
+<a class="viewcode-back" href="../api.html#run.get_analysis_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_analysis_data</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return all dashboard answers as a dict.&quot;&quot;&quot;</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="n">intl_pct</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_INTL_PCT</span><span class="p">)</span>
+    <span class="n">count_fall_2026</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_COUNT_FALL_2026</span><span class="p">)</span>
+    <span class="n">avg_gpa</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GPA</span><span class="p">)</span>
+    <span class="n">avg_gre</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GRE</span><span class="p">)</span>
+    <span class="n">avg_gre_v</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GRE_V</span><span class="p">)</span>
+    <span class="n">avg_gre_aw</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GRE_AW</span><span class="p">)</span>
+    <span class="n">avg_gpa_american_fall_2026</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GPA_AMERICAN_FALL_2026</span><span class="p">)</span>
+    <span class="n">pct_fall_2026_accept</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_PCT_FALL_2026_ACCEPT</span><span class="p">)</span>
+    <span class="n">avg_gpa_fall_2026_accept</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AVG_GPA_FALL_2026_ACCEPT</span><span class="p">)</span>
+    <span class="n">jhu_ms_cs_count</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_JHU_MS_CS_COUNT</span><span class="p">)</span>
+    <span class="n">cs_phd_2026_top_count</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_CS_PHD_2026_TOP_COUNT</span><span class="p">)</span>
+    <span class="n">cs_phd_2026_top_count_llm</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_CS_PHD_2026_TOP_COUNT_LLM</span><span class="p">)</span>
+    <span class="n">total_ai_count</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_TOTAL_AI_COUNT</span><span class="p">)</span>
+    <span class="n">ai_avg_gpa</span> <span class="o">=</span> <span class="n">query_scalar</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span> <span class="n">SQL_AI_AVG_GPA</span><span class="p">)</span>
+
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">counts_change</span> <span class="o">=</span> <span class="n">cs_phd_2026_top_count</span> <span class="o">!=</span> <span class="n">cs_phd_2026_top_count_llm</span>
+    <span class="n">change_explanation</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Yes. Downloaded fields count = </span><span class="si">{</span><span class="n">cs_phd_2026_top_count</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;LLM fields count = </span><span class="si">{</span><span class="n">cs_phd_2026_top_count_llm</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="k">if</span> <span class="n">counts_change</span>
+        <span class="k">else</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No. Both methods return </span><span class="si">{</span><span class="n">cs_phd_2026_top_count</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="k">if</span> <span class="n">cs_phd_2026_top_count</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="s2">&quot;No. Both methods returned no result.&quot;</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;intl_pct&quot;</span><span class="p">:</span> <span class="n">_format_two_decimals</span><span class="p">(</span><span class="n">intl_pct</span><span class="p">),</span>
+        <span class="s2">&quot;count_fall_2026&quot;</span><span class="p">:</span> <span class="n">count_fall_2026</span><span class="p">,</span>
+        <span class="s2">&quot;avg_gpa&quot;</span><span class="p">:</span> <span class="n">avg_gpa</span><span class="p">,</span>
+        <span class="s2">&quot;avg_gre&quot;</span><span class="p">:</span> <span class="n">avg_gre</span><span class="p">,</span>
+        <span class="s2">&quot;avg_gre_v&quot;</span><span class="p">:</span> <span class="n">avg_gre_v</span><span class="p">,</span>
+        <span class="s2">&quot;avg_gre_aw&quot;</span><span class="p">:</span> <span class="n">avg_gre_aw</span><span class="p">,</span>
+        <span class="s2">&quot;avg_gpa_american_fall_2026&quot;</span><span class="p">:</span> <span class="n">avg_gpa_american_fall_2026</span><span class="p">,</span>
+        <span class="s2">&quot;pct_fall_2026_accept&quot;</span><span class="p">:</span> <span class="n">_format_two_decimals</span><span class="p">(</span><span class="n">pct_fall_2026_accept</span><span class="p">),</span>
+        <span class="s2">&quot;avg_gpa_fall_2026_accept&quot;</span><span class="p">:</span> <span class="n">avg_gpa_fall_2026_accept</span><span class="p">,</span>
+        <span class="s2">&quot;jhu_ms_cs_count&quot;</span><span class="p">:</span> <span class="n">jhu_ms_cs_count</span><span class="p">,</span>
+        <span class="s2">&quot;cs_phd_2026_top_count&quot;</span><span class="p">:</span> <span class="n">cs_phd_2026_top_count</span><span class="p">,</span>
+        <span class="s2">&quot;cs_phd_2026_top_count_llm&quot;</span><span class="p">:</span> <span class="n">cs_phd_2026_top_count_llm</span><span class="p">,</span>
+        <span class="s2">&quot;counts_change&quot;</span><span class="p">:</span> <span class="n">counts_change</span><span class="p">,</span>
+        <span class="s2">&quot;change_explanation&quot;</span><span class="p">:</span> <span class="n">change_explanation</span><span class="p">,</span>
+        <span class="s2">&quot;total_ai_count&quot;</span><span class="p">:</span> <span class="n">total_ai_count</span><span class="p">,</span>
+        <span class="s2">&quot;ai_avg_gpa&quot;</span><span class="p">:</span> <span class="n">ai_avg_gpa</span><span class="p">,</span>
+        <span class="s2">&quot;scrape_running&quot;</span><span class="p">:</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;running&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;scrape_message&quot;</span><span class="p">:</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;scrape_last_run&quot;</span><span class="p">:</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;last_run&quot;</span><span class="p">],</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="index">
+<a class="viewcode-back" href="../api.html#run.index">[docs]</a>
+<span class="nd">@pages</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Redirect root to analysis page.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s2">&quot;pages.analysis&quot;</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="analysis">
+<a class="viewcode-back" href="../api.html#run.analysis">[docs]</a>
+<span class="nd">@pages</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/analysis&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">analysis</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Render the analytics dashboard.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s2">&quot;index.html&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">get_analysis_data</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="pull_data">
+<a class="viewcode-back" href="../api.html#run.pull_data">[docs]</a>
+<span class="nd">@pages</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/pull-data&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pull_data</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Start a scrape job if one is not already running.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">scrape_lock</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;running&quot;</span><span class="p">]:</span>
+            <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Pull Data is already running. Please wait until it finishes.&quot;</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]}),</span> <span class="mi">409</span>
+
+    <span class="k">if</span> <span class="n">current_app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SYNC_PULL_DATA&quot;</span><span class="p">):</span>
+        <span class="n">_run_scrape_job</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">_run_scrape_job</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Pull started&quot;</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+
+<div class="viewcode-block" id="update_analysis">
+<a class="viewcode-back" href="../api.html#run.update_analysis">[docs]</a>
+<span class="nd">@pages</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/update-analysis&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_analysis</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Refresh analysis when no scrape job is running.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">scrape_lock</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;running&quot;</span><span class="p">]:</span>
+            <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Update Analysis is disabled while Pull Data is running.&quot;</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">scrape_state</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]}),</span> <span class="mi">409</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Analysis refreshed&quot;</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">create_app</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8080</span><span class="p">)</span>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Grad Cafe Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

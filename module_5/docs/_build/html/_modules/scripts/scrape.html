@@ -1,0 +1,805 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>scripts.scrape &mdash; Grad Cafe Analytics  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Grad Cafe Analytics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../testing.html">Testing Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ops.html">Operational Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Grad Cafe Analytics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">scripts.scrape</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for scripts.scrape</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Grad Cafe Web Scraper - Module 2 Assignment</span>
+
+<span class="sd">Scrapes applicant admission data from The Grad Cafe survey pages.</span>
+<span class="sd">Uses urllib3 for HTTP requests and BeautifulSoup for HTML parsing.</span>
+
+<span class="sd">Notes:</span>
+<span class="sd">- This module focuses on scraping and basic parsing.</span>
+<span class="sd">- Data cleaning and persistence should live in clean.py (imported below).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span><span class="p">,</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">bs4</span><span class="w"> </span><span class="kn">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib3</span><span class="w"> </span><span class="kn">import</span> <span class="n">PoolManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib3.util.retry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Retry</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.clean</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_data</span><span class="p">,</span> <span class="n">save_data</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">clean</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_data</span><span class="p">,</span> <span class="n">save_data</span>
+
+
+<span class="c1"># Base URL for Grad Cafe survey</span>
+<span class="n">BASE_URL</span> <span class="o">=</span> <span class="s2">&quot;https://www.thegradcafe.com&quot;</span>
+<span class="n">SURVEY_URL</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BASE_URL</span><span class="si">}</span><span class="s2">/survey/&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_request_headers</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build headers for HTTP requests to mimic a normal browser.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Dict[str, str]: A headers dictionary suitable for urllib3 requests.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;User-Agent&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="s2">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 &quot;</span>
+            <span class="s2">&quot;(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36&quot;</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;Accept&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="s2">&quot;text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&quot;</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;Accept-Language&quot;</span><span class="p">:</span> <span class="s2">&quot;en-US,en;q=0.5&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_gre_from_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract GRE scores from comment/notes text using regex.</span>
+
+<span class="sd">    Looks for patterns like:</span>
+<span class="sd">      - GRE 170</span>
+<span class="sd">      - GRE: 170</span>
+<span class="sd">      - GRE V 163</span>
+<span class="sd">      - GRE Verbal 163</span>
+<span class="sd">      - GRE AW 4.0</span>
+<span class="sd">      - AW 4.0</span>
+<span class="sd">      - Analytical Writing 4.0 (partial support via AW pattern)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text (str): Input text from comments/notes.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[Optional[str], Optional[str], Optional[str]]:</span>
+<span class="sd">            (gre_total, gre_verbal, gre_aw) as strings, or None if not found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">gre_total</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">gre_verbal</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">gre_aw</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># GRE total: &quot;GRE 170&quot; or &quot;GRE: 170&quot;</span>
+    <span class="n">gre_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;\bGRE\b\s*:?\s*(\d{2,3})\b&quot;</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">,</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">gre_match</span><span class="p">:</span>
+        <span class="n">gre_total</span> <span class="o">=</span> <span class="n">gre_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># GRE verbal: &quot;GRE V 163&quot; or &quot;GRE Verbal 163&quot;</span>
+    <span class="n">gre_v_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;\bGRE\b\s*V(?:erbal)?\s*:?\s*(\d{2,3})\b&quot;</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">,</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">gre_v_match</span><span class="p">:</span>
+        <span class="n">gre_verbal</span> <span class="o">=</span> <span class="n">gre_v_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># GRE analytical writing: &quot;GRE AW 4.0&quot; or &quot;AW 4.0&quot;</span>
+    <span class="n">gre_aw_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;\b(?:GRE\s*)?AW\b\s*:?\s*(\d\.?\d*)\b&quot;</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">,</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">gre_aw_match</span><span class="p">:</span>
+        <span class="n">gre_aw</span> <span class="o">=</span> <span class="n">gre_aw_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">gre_total</span><span class="p">,</span> <span class="n">gre_verbal</span><span class="p">,</span> <span class="n">gre_aw</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_gre_from_badge_text</span><span class="p">(</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract GRE fields from a badge/label text on the listing page.</span>
+
+<span class="sd">    Badge examples (site-specific, best effort):</span>
+<span class="sd">      - &quot;GRE 320&quot;</span>
+<span class="sd">      - &quot;GRE V 163&quot;</span>
+<span class="sd">      - &quot;GRE AW 4.0&quot;</span>
+<span class="sd">      - &quot;Verbal 163&quot; (fallback)</span>
+<span class="sd">      - &quot;AW 4.0&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">gre_total</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">gre_verbal</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">gre_aw</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Normalize whitespace for easier matching.</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\s+&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># GRE total: &quot;GRE 320&quot; or &quot;GRE: 320&quot;</span>
+    <span class="n">total_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\bGRE\b\s*:?\s*(\d{2,3})\b&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">total_match</span><span class="p">:</span>
+        <span class="n">gre_total</span> <span class="o">=</span> <span class="n">total_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># GRE verbal: &quot;GRE V 163&quot; / &quot;GRE Verbal 163&quot; / &quot;Verbal 163&quot;</span>
+    <span class="n">verbal_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;\b(?:GRE\s*)?V(?:erbal)?\b\s*:?\s*(\d{2,3})\b&quot;</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">,</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbal_match</span><span class="p">:</span>
+        <span class="n">gre_verbal</span> <span class="o">=</span> <span class="n">verbal_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># GRE analytical writing: &quot;GRE AW 4.0&quot; / &quot;AW 4.0&quot;</span>
+    <span class="n">aw_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;\b(?:GRE\s*)?AW\b\s*:?\s*(\d\.?\d*)\b&quot;</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">,</span>
+        <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">aw_match</span><span class="p">:</span>
+        <span class="n">gre_aw</span> <span class="o">=</span> <span class="n">aw_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">gre_total</span><span class="p">,</span> <span class="n">gre_verbal</span><span class="p">,</span> <span class="n">gre_aw</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_gpa_from_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract GPA from text like &#39;GPA 3.69&#39; or &#39;GPA: 3.7&#39;.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text (str): Input text that may contain a GPA.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[str]: The GPA string if found, otherwise None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">gpa_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;GPA\s*:?\s*(\d\.?\d*)&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">gpa_match</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">gpa_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_decision_date</span><span class="p">(</span><span class="n">decision_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse decision text to extract status and date.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">      - &#39;Accepted on 29 Jan&#39; -&gt; (&#39;Accepted&#39;, &#39;29 Jan&#39;)</span>
+<span class="sd">      - &#39;Rejected on 7 Jun&#39;  -&gt; (&#39;Rejected&#39;, &#39;7 Jun&#39;)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        decision_text (str): Decision text extracted from the row.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[Optional[str], Optional[str]]:</span>
+<span class="sd">            (status, date_str) where date_str is typically &#39;DD Mon&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">decision_text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">decision_text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># Determine status (best-effort, based on substring matching).</span>
+    <span class="k">if</span> <span class="s2">&quot;Accepted&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;Accepted&quot;</span>
+    <span class="k">elif</span> <span class="s2">&quot;Rejected&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;Rejected&quot;</span>
+    <span class="k">elif</span> <span class="s2">&quot;Interview&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;Interview&quot;</span>
+    <span class="k">elif</span> <span class="s2">&quot;Wait listed&quot;</span> <span class="ow">in</span> <span class="n">text</span> <span class="ow">or</span> <span class="s2">&quot;Waitlisted&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;Wait listed&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Extract a decision date if present (e.g., &quot;on 29 Jan&quot;).</span>
+    <span class="n">date_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;on\s+(\d{1,2}\s+\w+)&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="n">date_str</span> <span class="o">=</span> <span class="n">date_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">date_match</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">status</span><span class="p">,</span> <span class="n">date_str</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_semester</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract semester/year like &#39;Fall 2026&#39; or &#39;Spring 2025&#39;.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text (str): Badge text.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[str]: Normalized semester/year string, or None if not found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(Fall|Spring)\s+(\d</span><span class="si">{4}</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_student_type</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract student type from badge text.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text (str): Badge text.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[str]: &quot;International&quot;, &quot;American&quot;, &quot;Other&quot;, or None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">text_lower</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s2">&quot;international&quot;</span> <span class="ow">in</span> <span class="n">text_lower</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;International&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;american&quot;</span> <span class="ow">in</span> <span class="n">text_lower</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;American&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;other&quot;</span> <span class="ow">in</span> <span class="n">text_lower</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;Other&quot;</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_degree</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract degree type: PhD, Masters, MBA, etc.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text (str): Program badge/subtitle text.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[str]: Degree type if detected, otherwise None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">degree_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PhD&quot;</span><span class="p">,</span> <span class="s2">&quot;Masters&quot;</span><span class="p">,</span> <span class="s2">&quot;MBA&quot;</span><span class="p">,</span> <span class="s2">&quot;MFA&quot;</span><span class="p">,</span> <span class="s2">&quot;JD&quot;</span><span class="p">,</span> <span class="s2">&quot;EdD&quot;</span><span class="p">,</span> <span class="s2">&quot;PsyD&quot;</span><span class="p">,</span> <span class="s2">&quot;Other&quot;</span><span class="p">]</span>
+    <span class="n">text_clean</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">degree</span> <span class="ow">in</span> <span class="n">degree_types</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">degree</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">text_clean</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">degree</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_listing_row</span><span class="p">(</span>
+    <span class="n">main_row</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">detail_row</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+    <span class="n">comment_row</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse a single applicant entry from listing page table rows.</span>
+
+<span class="sd">    The GradCafe listing layout commonly uses:</span>
+<span class="sd">      - main_row: contains school, program, added date, decision, and a result link</span>
+<span class="sd">      - detail_row: optional row (border-none) containing badges (semester, intl/us, gpa)</span>
+<span class="sd">      - comment_row: optional row (border-none) containing comments/notes</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        main_row (Any): The primary &lt;tr&gt; row.</span>
+<span class="sd">        detail_row (Optional[Any]): The detail/badge &lt;tr&gt; row (may be None).</span>
+<span class="sd">        comment_row (Optional[Any]): The comments &lt;tr&gt; row (may be None).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[Dict[str, Any]]: Parsed entry dict, or None if row is not parseable.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">entry</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;program&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;comments&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;date_added&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;applicant_status&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;acceptance_date&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;rejection_date&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;semester_year&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;international_american&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;gre_score&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;gre_v_score&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;degree_type&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;gpa&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;gre_aw&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Main row should contain multiple &lt;td&gt; cells. If fewer than expected, skip.</span>
+    <span class="n">tds</span> <span class="o">=</span> <span class="n">main_row</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tds</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># University/school (typically in first column)</span>
+    <span class="n">school_div</span> <span class="o">=</span> <span class="n">tds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;tw-font-medium&quot;</span><span class="p">))</span>
+    <span class="n">university</span> <span class="o">=</span> <span class="n">school_div</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">school_div</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="c1"># Program name and optional degree info (typically in second column)</span>
+    <span class="n">program_div</span> <span class="o">=</span> <span class="n">tds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;tw-text-gray-900&quot;</span><span class="p">))</span>
+    <span class="n">program_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">program_div</span><span class="p">:</span>
+        <span class="n">spans</span> <span class="o">=</span> <span class="n">program_div</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">spans</span><span class="p">:</span>
+            <span class="n">program_name</span> <span class="o">=</span> <span class="n">spans</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Some rows include degree type in the second span.</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">spans</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;degree_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_degree</span><span class="p">(</span><span class="n">spans</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_text</span><span class="p">())</span>
+
+    <span class="c1"># Combine program + university for downstream standardization compatibility.</span>
+    <span class="k">if</span> <span class="n">program_name</span> <span class="ow">and</span> <span class="n">university</span><span class="p">:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;program&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">program_name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">university</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">elif</span> <span class="n">program_name</span><span class="p">:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;program&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">program_name</span>
+    <span class="k">elif</span> <span class="n">university</span><span class="p">:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;program&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">university</span>
+
+    <span class="c1"># Added-on date (often in third column)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tds</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">added_text</span> <span class="o">=</span> <span class="n">tds</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">added_text</span> <span class="ow">and</span> <span class="s2">&quot;comments&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">added_text</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;date_added&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">added_text</span>
+
+    <span class="c1"># Decision/status (often in fourth column)</span>
+    <span class="n">decision_div</span> <span class="o">=</span> <span class="n">tds</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;tw-inline-flex&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">decision_div</span><span class="p">:</span>
+        <span class="n">decision_text</span> <span class="o">=</span> <span class="n">decision_div</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">status</span><span class="p">,</span> <span class="n">date_str</span> <span class="o">=</span> <span class="n">_parse_decision_date</span><span class="p">(</span><span class="n">decision_text</span><span class="p">)</span>
+
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;applicant_status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">status</span>
+
+        <span class="c1"># Store date under the appropriate key when possible.</span>
+        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;Accepted&quot;</span><span class="p">:</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;acceptance_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">date_str</span>
+        <span class="k">elif</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;Rejected&quot;</span><span class="p">:</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;rejection_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">date_str</span>
+
+    <span class="c1"># Result URL (look for link like /result/935454)</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">main_row</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">href</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;/result/\d+&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">link</span> <span class="ow">and</span> <span class="n">link</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;href&quot;</span><span class="p">):</span>
+        <span class="n">href</span> <span class="o">=</span> <span class="n">link</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">BASE_URL</span> <span class="o">+</span> <span class="n">href</span> <span class="k">if</span> <span class="n">href</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">href</span>
+
+    <span class="c1"># Detail row: badges (semester, international/american, GPA)</span>
+    <span class="k">if</span> <span class="n">detail_row</span><span class="p">:</span>
+        <span class="n">badges</span> <span class="o">=</span> <span class="n">detail_row</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;tw-inline-flex&quot;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">badge</span> <span class="ow">in</span> <span class="n">badges</span><span class="p">:</span>
+            <span class="n">badge_text</span> <span class="o">=</span> <span class="n">badge</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">badge_text</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">semester</span> <span class="o">=</span> <span class="n">_parse_semester</span><span class="p">(</span><span class="n">badge_text</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">semester</span><span class="p">:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;semester_year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">semester</span>
+                <span class="k">continue</span>
+
+            <span class="n">student_type</span> <span class="o">=</span> <span class="n">_parse_student_type</span><span class="p">(</span><span class="n">badge_text</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">student_type</span><span class="p">:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;international_american&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">student_type</span>
+                <span class="k">continue</span>
+
+            <span class="n">gpa</span> <span class="o">=</span> <span class="n">_extract_gpa_from_text</span><span class="p">(</span><span class="n">badge_text</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">gpa</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gpa&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gpa</span>
+
+            <span class="n">gre_total</span><span class="p">,</span> <span class="n">gre_verbal</span><span class="p">,</span> <span class="n">gre_aw</span> <span class="o">=</span> <span class="n">_extract_gre_from_badge_text</span><span class="p">(</span><span class="n">badge_text</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">gre_total</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_score&quot;</span><span class="p">]:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gre_total</span>
+            <span class="k">if</span> <span class="n">gre_verbal</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_v_score&quot;</span><span class="p">]:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_v_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gre_verbal</span>
+            <span class="k">if</span> <span class="n">gre_aw</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_aw&quot;</span><span class="p">]:</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_aw&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gre_aw</span>
+
+    <span class="c1"># Comment row: notes/comments; does not populate GRE anymore.</span>
+    <span class="k">if</span> <span class="n">comment_row</span><span class="p">:</span>
+        <span class="n">p_tag</span> <span class="o">=</span> <span class="n">comment_row</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p_tag</span><span class="p">:</span>
+            <span class="n">comment_text</span> <span class="o">=</span> <span class="n">p_tag</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;comments&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">comment_text</span> <span class="k">if</span> <span class="n">comment_text</span> <span class="k">else</span> <span class="kc">None</span>
+
+            <span class="c1"># GPA may also appear in comments.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gpa&quot;</span><span class="p">]:</span>
+                <span class="n">gpa_from_comment</span> <span class="o">=</span> <span class="n">_extract_gpa_from_text</span><span class="p">(</span><span class="n">comment_text</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">gpa_from_comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gpa&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gpa_from_comment</span>
+
+    <span class="c1"># If GRE badges were not found, set default to 0.0 (as requested).</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_score&quot;</span><span class="p">]:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_v_score&quot;</span><span class="p">]:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_v_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_aw&quot;</span><span class="p">]:</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;gre_aw&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">return</span> <span class="n">entry</span>
+
+
+<div class="viewcode-block" id="scrape_data">
+<a class="viewcode-back" href="../../api.html#scripts.scrape.scrape_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">scrape_data</span><span class="p">(</span><span class="n">max_entries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Pull data from Grad Cafe survey pages.</span>
+
+<span class="sd">    Paginates through results until max_entries is reached or no more rows exist.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        max_entries (int): Maximum number of entries to scrape.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[Dict[str, Any]]: List of scraped applicant entry dictionaries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">http</span> <span class="o">=</span> <span class="n">PoolManager</span><span class="p">(</span>
+        <span class="n">retries</span><span class="o">=</span><span class="n">Retry</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">backoff_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">headers</span><span class="o">=</span><span class="n">_build_request_headers</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="n">all_entries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">page</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">per_page</span> <span class="o">=</span> <span class="mi">100</span>
+
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">max_entries</span><span class="p">:</span>
+        <span class="c1"># Build paginated URL (page parameter omitted for page 1).</span>
+        <span class="k">if</span> <span class="n">page</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">SURVEY_URL</span><span class="si">}</span><span class="s2">?per_page=</span><span class="si">{</span><span class="n">per_page</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">SURVEY_URL</span><span class="si">}</span><span class="s2">?per_page=</span><span class="si">{</span><span class="n">per_page</span><span class="si">}</span><span class="s2">&amp;page=</span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="c1"># Fetch page HTML.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: HTTP </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+
+            <span class="n">html</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error fetching page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="c1"># Parse HTML for the results table body.</span>
+        <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+        <span class="n">tbody</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;tbody&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;tw-divide-y&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tbody</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: No tbody found&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">tbody</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">)</span>
+        <span class="n">page_entries</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># GradCafe uses a pattern of:</span>
+        <span class="c1">#   main &lt;tr&gt; followed by 0-2 &quot;tw-border-none&quot; &lt;tr&gt; rows.</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">):</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="c1"># Skip detail/comment rows until we hit a main row.</span>
+            <span class="k">if</span> <span class="s2">&quot;tw-border-none&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]):</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="n">main_row</span> <span class="o">=</span> <span class="n">row</span>
+            <span class="n">detail_row</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">comment_row</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># Next row may be detail row</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;tw-border-none&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]):</span>
+                <span class="n">detail_row</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># Next row may be comment row</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;tw-border-none&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]):</span>
+                <span class="n">comment_row</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">_parse_listing_row</span><span class="p">(</span><span class="n">main_row</span><span class="p">,</span> <span class="n">detail_row</span><span class="p">,</span> <span class="n">comment_row</span><span class="p">)</span>
+
+            <span class="c1"># Only keep entries that include a result URL.</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">):</span>
+                <span class="n">all_entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                <span class="n">page_entries</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_entries</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">page_entries</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: No new entries&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">page_entries</span><span class="si">}</span><span class="s2"> entries (total: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_entries</span><span class="p">:</span>
+            <span class="k">break</span>
+
+        <span class="n">page</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># Persist scraped output using clean.py helper (preferred).</span>
+    <span class="n">save_data</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">all_entries</span></div>
+
+
+
+<div class="viewcode-block" id="scrape_new_data">
+<a class="viewcode-back" href="../../api.html#scripts.scrape.scrape_new_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">scrape_new_data</span><span class="p">(</span>  <span class="c1"># pragma: no cover</span>
+    <span class="n">existing_urls</span><span class="p">,</span>
+    <span class="n">max_entries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span><span class="p">,</span>
+    <span class="n">max_pages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="n">latest_date</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Scrape only new entries (by URL) and stop when a page yields no new results.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        existing_urls: set of URLs already in the database</span>
+<span class="sd">        max_entries: cap on new entries to return</span>
+<span class="sd">        max_pages: cap on pages to scan</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of new entry dicts</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">http</span> <span class="o">=</span> <span class="n">PoolManager</span><span class="p">(</span>
+        <span class="n">retries</span><span class="o">=</span><span class="n">Retry</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">backoff_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">headers</span><span class="o">=</span><span class="n">_build_request_headers</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="n">latest_dt</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">latest_date</span><span class="p">:</span>
+        <span class="n">latest_dt</span> <span class="o">=</span> <span class="n">_parse_added_date</span><span class="p">(</span><span class="n">latest_date</span><span class="p">)</span>
+
+    <span class="n">all_entries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">page</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">per_page</span> <span class="o">=</span> <span class="mi">100</span>
+
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">max_entries</span> <span class="ow">and</span> <span class="n">page</span> <span class="o">&lt;=</span> <span class="n">max_pages</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">page</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">SURVEY_URL</span><span class="si">}</span><span class="s2">?per_page=</span><span class="si">{</span><span class="n">per_page</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">SURVEY_URL</span><span class="si">}</span><span class="s2">?per_page=</span><span class="si">{</span><span class="n">per_page</span><span class="si">}</span><span class="s2">&amp;page=</span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: HTTP </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+
+            <span class="n">html</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error fetching page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+        <span class="n">tbody</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;tbody&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;tw-divide-y&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tbody</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: No tbody found&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">tbody</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">)</span>
+        <span class="n">page_entries</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">page_new</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">):</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="s2">&quot;tw-border-none&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]):</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="n">main_row</span> <span class="o">=</span> <span class="n">row</span>
+            <span class="n">detail_row</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">comment_row</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;tw-border-none&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]):</span>
+                <span class="n">detail_row</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;tw-border-none&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]):</span>
+                <span class="n">comment_row</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">_parse_listing_row</span><span class="p">(</span><span class="n">main_row</span><span class="p">,</span> <span class="n">detail_row</span><span class="p">,</span> <span class="n">comment_row</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">):</span>
+                <span class="n">page_entries</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">existing_urls</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">latest_dt</span><span class="p">:</span>
+                        <span class="n">entry_dt</span> <span class="o">=</span> <span class="n">_parse_added_date</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;date_added&quot;</span><span class="p">))</span>
+                        <span class="k">if</span> <span class="n">entry_dt</span> <span class="ow">and</span> <span class="n">entry_dt</span> <span class="o">&lt;=</span> <span class="n">latest_dt</span><span class="p">:</span>
+                            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="k">continue</span>
+                    <span class="n">all_entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                    <span class="n">page_new</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">max_entries</span><span class="p">:</span>
+                        <span class="k">break</span>
+
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">page_entries</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: No entries&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">page_new</span><span class="si">}</span><span class="s2"> new entries (total: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_entries</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">page_new</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">break</span>
+
+        <span class="n">page</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">all_entries</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_added_date</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">datetime</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">datetime</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">text</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">datetime</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">year</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">month</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">day</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">formats</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;%B </span><span class="si">%d</span><span class="s2">, %Y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;%b </span><span class="si">%d</span><span class="s2">, %Y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;%B </span><span class="si">%d</span><span class="s2"> %Y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;%b </span><span class="si">%d</span><span class="s2"> %Y&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="n">formats</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">fmt</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">continue</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="save_scraped_data">
+<a class="viewcode-back" href="../../api.html#scripts.scrape.save_scraped_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_scraped_data</span><span class="p">(</span><span class="n">entries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;applicant_data.json&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Save scraped data to a JSON file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        entries (List[Dict[str, Any]]): Scraped entries.</span>
+<span class="sd">        filepath (str): Output file path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_handle</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">entries</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries to </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="c1"># Run a scrape directly from the CLI for quick testing.</span>
+    <span class="n">scrape_data</span><span class="p">(</span><span class="n">max_entries</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Grad Cafe Team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
