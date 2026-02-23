@@ -1,27 +1,41 @@
-"""SQL queries and CLI output for Module 3 analytics."""
+"""SQL queries and CLI output for Module 5 analytics (psycopg composition, LIMIT enforced)."""
 
 import os
 
 import psycopg
+from psycopg import sql
 
-SQL_SELECT_EXISTING_URLS = "SELECT url FROM admission_results WHERE url IS NOT NULL"
+# Maximum allowed LIMIT for multi-row queries (1-100).
+MAX_QUERY_LIMIT = 100
+MIN_QUERY_LIMIT = 1
 
-SQL_LATEST_DATE_ADDED = """
+
+def _clamp_limit(limit: int) -> int:
+    """Clamp limit to allowed range."""
+    return max(MIN_QUERY_LIMIT, min(MAX_QUERY_LIMIT, int(limit)))
+
+
+# Composed SQL: multi-row query uses placeholder for LIMIT.
+SQL_SELECT_EXISTING_URLS = sql.SQL(
+    "SELECT url FROM admission_results WHERE url IS NOT NULL LIMIT %s"
+)
+
+SQL_LATEST_DATE_ADDED = sql.SQL("""
 SELECT date_added
 FROM admission_results
 WHERE date_added IS NOT NULL
 ORDER BY date_added DESC
 LIMIT 1
-"""
+""")
 
-SQL_INSERT_ADMISSION_RESULTS = """
+SQL_INSERT_ADMISSION_RESULTS = sql.SQL("""
 INSERT INTO admission_results
 (program, comments, date_added, url, status, term, us_or_international,
  gre, gre_v, gpa, gre_aw, degree, llm_generated_program, llm_generated_university)
 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-"""
+""")
 
-SQL_INTL_PCT = """
+SQL_INTL_PCT = sql.SQL("""
 SELECT ROUND(
     100.0 * SUM(CASE
         WHEN us_or_international NOT IN ('American', 'Other')
@@ -30,47 +44,54 @@ SELECT ROUND(
     ) / NULLIF(COUNT(*), 0),
 2)
 FROM admission_results
-"""
+LIMIT 1
+""")
 
-SQL_COUNT_FALL_2026 = """
+SQL_COUNT_FALL_2026 = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE term = 'Fall 2026'
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GPA = """
+SQL_AVG_GPA = sql.SQL("""
 SELECT ROUND(AVG(gpa)::numeric, 2)
 FROM admission_results
 WHERE gpa IS NOT NULL
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GRE = """
+SQL_AVG_GRE = sql.SQL("""
 SELECT ROUND(AVG(gre)::numeric, 2)
 FROM admission_results
 WHERE gre IS NOT NULL AND gre > 0
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GRE_V = """
+SQL_AVG_GRE_V = sql.SQL("""
 SELECT ROUND(AVG(gre_v)::numeric, 2)
 FROM admission_results
 WHERE gre_v IS NOT NULL AND gre_v > 0
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GRE_AW = """
+SQL_AVG_GRE_AW = sql.SQL("""
 SELECT ROUND(AVG(gre_aw)::numeric, 2)
 FROM admission_results
 WHERE gre_aw IS NOT NULL AND gre_aw > 0
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GPA_AMERICAN_FALL_2026 = """
+SQL_AVG_GPA_AMERICAN_FALL_2026 = sql.SQL("""
 SELECT ROUND(AVG(gpa)::numeric, 2)
 FROM admission_results
 WHERE gpa IS NOT NULL
   AND us_or_international = 'American'
   AND term = 'Fall 2026'
-"""
+LIMIT 1
+""")
 
-SQL_PCT_FALL_2026_ACCEPT = """
+SQL_PCT_FALL_2026_ACCEPT = sql.SQL("""
 SELECT ROUND(
     100.0 * SUM(CASE
         WHEN status ILIKE 'Accepted%' THEN 1 ELSE 0 END
@@ -78,25 +99,28 @@ SELECT ROUND(
 2)
 FROM admission_results
 WHERE term = 'Fall 2026'
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GPA_FALL_2026_ACCEPT = """
+SQL_AVG_GPA_FALL_2026_ACCEPT = sql.SQL("""
 SELECT ROUND(AVG(gpa)::numeric, 2)
 FROM admission_results
 WHERE gpa IS NOT NULL
   AND term = 'Fall 2026'
   AND status ILIKE '%Accepted%'
-"""
+LIMIT 1
+""")
 
-SQL_JHU_MS_CS_COUNT = """
+SQL_JHU_MS_CS_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE program ILIKE '%Computer Science%'
   AND (program ILIKE '%Johns Hopkins%' OR program ILIKE '%JHU%')
   AND degree ILIKE '%Master%'
-"""
+LIMIT 1
+""")
 
-SQL_CS_PHD_2026_TOP_COUNT = """
+SQL_CS_PHD_2026_TOP_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE term ILIKE '%2026%'
@@ -110,9 +134,10 @@ WHERE term ILIKE '%2026%'
      OR program ILIKE '%Stanford%'
      OR program ILIKE '%Carnegie Mellon%'
   )
-"""
+LIMIT 1
+""")
 
-SQL_CS_PHD_2026_TOP_COUNT_LLM = """
+SQL_CS_PHD_2026_TOP_COUNT_LLM = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE term ILIKE '%2026%'
@@ -126,84 +151,103 @@ WHERE term ILIKE '%2026%'
      OR llm_generated_university ILIKE '%Stanford%'
      OR llm_generated_university ILIKE '%Carnegie Mellon%'
   )
-"""
+LIMIT 1
+""")
 
-SQL_TOTAL_AI_COUNT = """
+SQL_TOTAL_AI_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE program ILIKE '%Artificial Intelligence%'
   AND status ILIKE '%Accepted%'
-"""
+LIMIT 1
+""")
 
-SQL_AI_AVG_GPA = """
+SQL_AI_AVG_GPA = sql.SQL("""
 SELECT ROUND(AVG(gpa)::numeric, 2)
 FROM admission_results
 WHERE gpa IS NOT NULL
   AND program ILIKE '%Artificial Intelligence%'
   AND status ILIKE '%Accepted%'
-"""
+LIMIT 1
+""")
 
-SQL_APPLICANT_COUNT = """
+SQL_APPLICANT_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
-"""
+LIMIT 1
+""")
 
-SQL_INTL_COUNT = """
+SQL_INTL_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE us_or_international NOT IN ('American', 'Other')
   AND us_or_international IS NOT NULL
-"""
+LIMIT 1
+""")
 
-SQL_US_COUNT = """
+SQL_US_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE us_or_international = 'American'
-"""
+LIMIT 1
+""")
 
-SQL_OTHER_COUNT = """
+SQL_OTHER_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE us_or_international = 'Other'
-"""
+LIMIT 1
+""")
 
-SQL_ACCEPTANCE_COUNT = """
+SQL_ACCEPTANCE_COUNT = sql.SQL("""
 SELECT COUNT(*)
 FROM admission_results
 WHERE status ILIKE 'Accepted%'
-"""
+LIMIT 1
+""")
 
-SQL_ACCEPTANCE_PCT = """
+SQL_ACCEPTANCE_PCT = sql.SQL("""
 SELECT ROUND(
     100.0 * SUM(CASE
         WHEN status ILIKE 'Accepted%' THEN 1 ELSE 0 END
     ) / NULLIF(COUNT(*), 0),
 2)
 FROM admission_results
-"""
+LIMIT 1
+""")
 
-SQL_AVG_GPA_ACCEPTANCE = """
+SQL_AVG_GPA_ACCEPTANCE = sql.SQL("""
 SELECT ROUND(AVG(gpa)::numeric, 2)
 FROM admission_results
 WHERE gpa IS NOT NULL
   AND status ILIKE 'Accepted%'
-"""
+LIMIT 1
+""")
 
 
 def get_db_connection():
-    """Create a new database connection."""
+    """Create a new database connection from environment variables."""
     url = os.environ.get("DATABASE_URL")
     if url:
         return psycopg.connect(url)
-    return psycopg.connect(dbname="grad_cafe", user="postgres")
+    connparams = {
+        "dbname": os.environ.get("DB_NAME", "grad_cafe"),
+        "user": os.environ.get("DB_USER", "postgres"),
+        "password": os.environ.get("DB_PASSWORD", ""),
+        "host": os.environ.get("DB_HOST", "localhost"),
+        "port": os.environ.get("DB_PORT", "5432"),
+    }
+    if connparams["password"] == "":
+        del connparams["password"]
+    return psycopg.connect(**connparams)
 
 
-def query_scalar(cur, sql, params=None):
+def query_scalar(cur, stmt, params=None):
     """Run a query that returns a single scalar value."""
     if params is None:
-        cur.execute(sql)
+        cur.execute(stmt)
     else:
-        cur.execute(sql, params)
+        cur.execute(stmt, params)
     row = cur.fetchone()
     if row is None:
         return None

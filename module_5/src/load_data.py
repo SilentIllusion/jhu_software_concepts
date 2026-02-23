@@ -5,16 +5,21 @@ from __future__ import annotations
 import json
 from typing import Iterable, Sequence
 
-import psycopg
+from psycopg import sql
+
+from query_data import get_db_connection
+
+SQL_INSERT_ADMISSION_RESULTS = sql.SQL("""
+INSERT INTO admission_results
+(program, comments, date_added, url, status, term, us_or_international,
+ degree, gre, gre_v, gpa, gre_aw, llm_generated_program, llm_generated_university)
+VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+""")
 
 
 def _get_connection():  # pragma: no cover
-    """Create a psycopg connection using default credentials."""
-    return psycopg.connect(
-        dbname="grad_cafe",
-        user="postgres",
-        password="04021986",
-    )
+    """Create a psycopg connection from environment variables."""
+    return get_db_connection()
 
 
 def _to_rows(records: Iterable[dict]) -> list[Sequence]:
@@ -63,15 +68,7 @@ def load_corrected_data(filepath: str = "corrected_application_data_v2.json", co
     data = _to_rows(records)
 
     with conn.cursor() as cur:
-        cur.executemany(
-            """
-            INSERT INTO admission_results
-            (program, comments, date_added, url, status, term, us_or_international,
-             degree, gre, gre_v, gpa, gre_aw, llm_generated_program, llm_generated_university)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            data,
-        )
+        cur.executemany(SQL_INSERT_ADMISSION_RESULTS, data)
 
     conn.commit()
     if close_conn:

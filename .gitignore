@@ -1,6 +1,7 @@
 /module_2/llm_hosting/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 /module_2/llm_hosting/models/*.gguf
-module_2.zip
+*.gguf
+
 *.zip
 module_3/cleanup.py
 module_3/app/scripts/update_gre_from_urls.py
@@ -10,3 +11,4 @@ module_3/app/scripts/update_gre_from_urls.py
 *.jpeg
 module_4/docs/_build/
 *.venv
+*.pytest_cache

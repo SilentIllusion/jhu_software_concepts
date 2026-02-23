@@ -1,13 +1,12 @@
 """Flask app for Grad Cafe analytics and data refresh."""
 
-import os
 import threading
 import time
 
-import psycopg
 from flask import Blueprint, Flask, current_app, jsonify, redirect, render_template, url_for
 
 from query_data import (
+    MAX_QUERY_LIMIT,
     SQL_AI_AVG_GPA,
     SQL_AVG_GPA,
     SQL_AVG_GPA_AMERICAN_FALL_2026,
@@ -25,6 +24,8 @@ from query_data import (
     SQL_PCT_FALL_2026_ACCEPT,
     SQL_SELECT_EXISTING_URLS,
     SQL_TOTAL_AI_COUNT,
+    get_db_connection,
+    query_scalar,
 )
 from scripts.clean import clean_data
 from scripts.scrape import scrape_new_data
@@ -45,29 +46,6 @@ def create_app(test_config=None):
     return app
 
 
-def get_db_connection():
-    """Create a new database connection.
-
-    Prefers DATABASE_URL if set; otherwise falls back to local defaults.
-    """
-    url = os.environ.get("DATABASE_URL")
-    if url:
-        return psycopg.connect(url)
-    return psycopg.connect(dbname="grad_cafe", user="postgres")
-
-
-def query_scalar(cur, sql, params=None):
-    """Run a query that returns a single scalar value."""
-    if params is None:
-        cur.execute(sql)
-    else:
-        cur.execute(sql, params)
-    row = cur.fetchone()
-    if row is None:
-        return None
-    return row[0]
-
-
 def _format_two_decimals(value):
     """Format percentage-like values with two decimals."""
     if value is None:
@@ -76,9 +54,9 @@ def _format_two_decimals(value):
 
 
 def _get_existing_urls(conn):
-    """Return a set of URLs already present in the database."""
+    """Return a set of URLs already present in the database (up to MAX_QUERY_LIMIT)."""
     with conn.cursor() as cur:
-        cur.execute(SQL_SELECT_EXISTING_URLS)
+        cur.execute(SQL_SELECT_EXISTING_URLS, (MAX_QUERY_LIMIT,))
         rows = cur.fetchall()
     urls = set()
     for row in rows:
